@@ -4,6 +4,8 @@ Interactive speech-practice stories for kids. A painted landscape and an animate
 
 > **Safety:** StoryBuddy supports speech-therapy **practice**. It does not diagnose any condition and does not replace a speech therapist.
 
+**Live demo:** [https://storybuddy-sagv.onrender.com/](https://storybuddy-sagv.onrender.com/)
+
 ---
 
 ## What it does
@@ -42,10 +44,11 @@ Equivalent:
 
 Then open:
 
-- **Landing page:** http://127.0.0.1:8000/
-- **Child experience:** http://127.0.0.1:8000/app
-- **Developer lab:** http://127.0.0.1:8000/lab
-- **API docs:** http://127.0.0.1:8000/docs
+- **Live site:** https://storybuddy-sagv.onrender.com/
+- **Landing page (local):** http://127.0.0.1:8000/
+- **Child experience (local):** http://127.0.0.1:8000/app
+- **Developer lab (local):** http://127.0.0.1:8000/lab
+- **API docs (local):** http://127.0.0.1:8000/docs
 
 ## Frontend
 
