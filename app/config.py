@@ -44,6 +44,15 @@ SOUND_FOR_SENTIMENT = {
 }
 DEFAULT_SOUND = "soft_pop"        # when the reply is invalid or the sentiment is unknown
 FINAL_SUCCESS_SOUND = "cheer"     # last beat, answered well
+
+# Targeted beats: up to MAX_ATTEMPTS tries per practice word, then always move on warmly.
+# On these beats the attempt's OUTCOME picks the sound (open beats still use the sentiment).
+MAX_ATTEMPTS = 3
+SOUND_FOR_OUTCOME = {
+    "match": "happy_chime",        # said it (cheer instead on the story's last beat)
+    "retry": "soft_try_again",     # not yet, another try coming
+    "not_yet": "gentle_encourage", # 3 tries used: move on, practise it another time
+}
 # Playback volume for these sounds, 0.0-1.0 (they're already mastered quietly).
 # Changeable in the app; this is the starting value.
 SOUND_VOLUME = float(os.getenv("SOUND_VOLUME", "0.5"))

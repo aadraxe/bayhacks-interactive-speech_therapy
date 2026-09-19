@@ -1,6 +1,10 @@
-"""score_response(): did the child say the target word?
+"""Did the child say the target word?
 
-Deliberately simple and explainable for a parent or therapist:
+is_close_match()  decides a targeted beat's retry loop: match -> move on, no match -> try again
+                  (up to 3). Deliberately LENIENT, so an STT mishear never forces an unfair retry.
+score_response()  the 0-1 accuracy number that goes into sessions and the progress report.
+
+score_response() is deliberately simple and explainable for a parent or therapist:
   exact        the target appears in what was heard           accuracy 1.0
   close        a heard word is a near match ("brav", "braver")  accuracy = similarity (0.75-0.99)
   missed       something was said, but not the target          accuracy = best similarity (< 0.75)
@@ -59,6 +63,123 @@ def score_response(transcript: str, target_word: str, words=None) -> dict:
         "matched_text": " ".join(best_window) if best_window and match != "missed" else None,
         "confidence": _confidence(best_window, words) if match != "missed" else None,
     }
+
+
+INFLECTIONS = ("s", "es", "ed", "d", "ing", "er", "y", "ies")
+
+
+def is_close_match(transcript: str, target_word: str) -> dict:
+    """Lenient check for the retry loop: did the child (probably) say the target word?
+
+    Case, punctuation and extra words are ignored ("I think it's a carrot!" matches).
+    MATCH when any word (or two words joined, e.g. "rain bow") is:
+      exact        the target itself
+      inflection   the target plus an ending: "carrots", "smiled", "swimming"
+      stretched    the target with drawn-out letters: "rrred", "caaarrot"
+      close        within a small spelling distance: 1 edit up to 4 letters, 2 up to 8, 3 beyond
+      phonetic     sounds the same once spelling is normalised: "kerrot" ~ "carrot", "flour" ~ "flower"
+    One guard: for short words (4 letters or fewer) the first sound must agree, because
+    swapping it makes a different word ("wed" for "red", "fun" for "sun"). That is usually
+    the practice sound itself, not a transcription slip.
+
+    Otherwise NO MATCH, with the reason kept for the log:
+      started_word  said the start of the word ("car" for "carrot": the ending was dropped)
+      dropped_start said the end of the word ("wim" for "swim": the beginning was dropped)
+      different     said something else
+      no_response   nothing was heard
+
+    Returns {"match", "reason", "heard_text", "closest", "distance"}.
+    """
+    heard_text = " ".join((transcript or "").split())
+    target = _collapse(_letters(target_word))
+    if not target:
+        raise ValueError("target_word is empty")
+    tokens = [_letters(t) for t in _tokens(heard_text)]
+    tokens = [t for t in tokens if t]
+    result = {"heard_text": heard_text, "closest": None, "distance": None}
+    if not tokens:
+        return {**result, "match": False, "reason": "no_response"}
+
+    # Every word, plus each pair of neighbouring words joined together.
+    candidates = tokens + [a + b for a, b in zip(tokens, tokens[1:])]
+    best = None  # (reason rank, distance, candidate, reason)
+    for word in candidates:
+        reason = _match_reason(word, target)
+        distance = _edit_distance(_collapse(word), target)
+        rank = 0 if reason else 1
+        key = (rank, distance, word, reason)
+        if best is None or key < best:
+            best = key
+
+    _, distance, closest, reason = best
+    result.update(closest=closest, distance=distance)
+    if reason:
+        return {**result, "match": True, "reason": reason}
+    if any(len(t) >= 2 and target.startswith(t) for t in tokens):
+        reason = "started_word"
+    elif any(len(t) >= 2 and target.endswith(t) for t in tokens):
+        reason = "dropped_start"
+    else:
+        reason = "different"
+    return {**result, "match": False, "reason": reason}
+
+
+def _match_reason(word: str, target: str) -> str | None:
+    if word == target:
+        return "exact"
+    stems = {target, target + target[-1]}  # "swim" -> "swimming" doubles the last letter
+    if target.endswith("e"):
+        stems.add(target[:-1])              # "smile" -> "smiling"
+    if target.endswith("y"):
+        stems.add(target[:-1] + "i")        # "bunny" -> "bunnies"
+    if any(word == stem + ending for stem in stems for ending in INFLECTIONS):
+        return "inflection"
+    if _collapse(word) == target:
+        return "stretched"
+    short = len(target) <= 4
+    if short and _phonetic(word)[:1] != _phonetic(target)[:1]:
+        return None
+    allowed = 1 if short else 2 if len(target) <= 8 else 3
+    if _edit_distance(_collapse(word), target) <= allowed:
+        return "close"
+    if _edit_distance(_phonetic(word), _phonetic(target)) <= (0 if short else 1):
+        return "phonetic"
+    return None
+
+
+def _letters(text: str) -> str:
+    return re.sub(r"[^a-z]", "", text.lower())
+
+
+def _collapse(word: str) -> str:
+    """Squash letters repeated 3+ times ("rrred" -> "red") but keep real doubles ("carrot")."""
+    return re.sub(r"(.)\1{2,}", r"\1", word)
+
+
+_PHONETIC_RULES = [
+    (r"^kn", "n"), (r"^wr", "r"), (r"^wh", "w"), (r"ph", "f"), (r"ck", "k"), (r"qu", "kw"),
+    (r"gh", ""), (r"c(?=[eiy])", "s"), (r"c", "k"), (r"x", "ks"), (r"z", "s"),
+    (r"(ou|ow)", "au"), (r"(.)\1+", r"\1"), (r"(?<=.{3})e$", ""), (r"y$", "i"),
+]
+
+
+def _phonetic(word: str) -> str:
+    """A rough sound-alike key: spelling variants that sound the same map to one form."""
+    key = _collapse(word)
+    for pattern, replacement in _PHONETIC_RULES:
+        key = re.sub(pattern, replacement, key)
+    return key
+
+
+def _edit_distance(a: str, b: str) -> int:
+    """Levenshtein distance (insertions, deletions, substitutions)."""
+    previous = list(range(len(b) + 1))
+    for i, ca in enumerate(a, 1):
+        current = [i]
+        for j, cb in enumerate(b, 1):
+            current.append(min(previous[j] + 1, current[j - 1] + 1, previous[j - 1] + (ca != cb)))
+        previous = current
+    return previous[-1]
 
 
 def _confidence(window, words):

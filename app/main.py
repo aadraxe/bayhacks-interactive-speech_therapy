@@ -246,17 +246,26 @@ def respond(
     """One turn: the child's answer to the current beat in, the companion's reaction out.
 
     Send a WAV recording as `audio`, or `text` to test the conversation without a mic.
-    targeted beat -> transcribe (keyterm = target) + score + acoustics
-    open beat     -> transcribe + participation only (no accuracy score)
+
+    Targeted beat (retry loop, at most config.MAX_ATTEMPTS tries per word):
+      transcribe (keyterm = target) -> is_close_match (lenient)
+        match                  -> happy_chime (cheer on the last beat), warm reaction, next beat
+        no match, tries left   -> soft_try_again, warm "let's say it together" line, SAME beat again
+        no match, out of tries -> gentle_encourage, "we'll practise it another time", next beat
+      The word is logged once it's finished: every try's heard_text, attempts_taken
+      (1/2/3 or "not_yet"), final_result, and acoustics from the successful try.
+    Open beat: transcribe + participation only (no accuracy, no retries).
     After the last beat the session is appended to sessions.json.
     """
     session = sessions.get_active(session_id)
     if session is None:
         raise HTTPException(status_code=404, detail="This story session has ended or doesn't exist. Start a new one.")
-    beats = session["story"]["beats"]
+    story = session["story"]
+    beats = story["beats"]
     beat_index = len(session["beats"])
     beat = beats[beat_index]
     targeted = beat["type"] == "targeted"
+    is_last_beat = beat_index == len(beats) - 1
 
     analysis, words = None, None
     if audio is not None and audio.filename:
@@ -276,35 +285,59 @@ def respond(
     else:
         raise HTTPException(status_code=400, detail="Send a recording or some text.")
 
-    record = {"index": beat_index, "type": beat["type"], "heard": child_text, "input": input_mode}
-    score, participation = None, None
+    score, match, participation, outcome, attempt = None, None, None, None, None
     if targeted:
-        score = scoring.score_response(child_text, beat["target_response"], words)
+        target = beat["target_response"]
+        attempts = sessions.pending_attempts(session)
+        attempt = len(attempts) + 1
+        match = scoring.is_close_match(child_text, target)
+        score = scoring.score_response(child_text, target, words)
         features = None
         if analysis:
             features = {k: analysis[k] for k in sessions.FEATURE_KEYS}
             features["reliable"] = analysis["reliable"]
-        record.update(target=beat["target_response"], accuracy=score["accuracy"], match=score["match"], features=features)
+        attempts.append({
+            "attempt": attempt, "heard_text": child_text, "input": input_mode,
+            "match": match["match"], "reason": match["reason"], "accuracy": score["accuracy"],
+            "features": features,
+        })
+        # Hard cap: after MAX_ATTEMPTS the beat always finishes, match or not.
+        if match["match"]:
+            outcome = "match"
+        elif attempt < config.MAX_ATTEMPTS:
+            outcome = "retry"
+        else:
+            outcome = "not_yet"
+        reaction = companion.react(story, beat_index, child_text, outcome=outcome, attempt=attempt)
+        sound = companion.sound_for_outcome(outcome, is_last_beat)
+        record = None if outcome == "retry" else sessions.targeted_record(beat_index, target, attempts)
     else:
         participation = {
             "responded": bool(child_text),
             "word_count": len(child_text.split()),
             "duration_s": analysis["speech_s"] if analysis else None,
         }
-        record.update(participation)
+        reaction = companion.react(story, beat_index, child_text)
+        sound = companion.sound_for(reaction["sentiment"], is_last_beat)
+        record = {"index": beat_index, "type": "open", "heard": child_text, "input": input_mode, **participation}
 
-    # Reaction: LLM -> {sentiment, reaction_text}; sentiment -> soft sound; text -> narrator.
-    reaction = companion.react(session["story"], beat_index, child_text, score)
-    done = beat_index + 1 >= len(beats)
-    sound = companion.sound_for(reaction["sentiment"], is_last_beat=done, target_heard=bool(score and score["said_target"]))
-    record["sentiment"] = reaction["sentiment"]
-    sessions.record_beat(session, record)
-    saved = sessions.finish(session_id) if done else None
+    beat_done = record is not None
+    saved = None
+    if beat_done:
+        record["sentiment"] = reaction["sentiment"]
+        sessions.record_beat(session, record)
+        if is_last_beat:
+            saved = sessions.finish(session_id)
     return {
         "beat_index": beat_index,
         "beat_type": beat["type"],
         "input": input_mode,
         "heard": child_text,
+        # Targeted beats: this try's result and where the retry loop stands.
+        "outcome": outcome,                 # "match" | "retry" | "not_yet" | None (open beat)
+        "attempt": attempt,
+        "max_attempts": config.MAX_ATTEMPTS if targeted else None,
+        "match": match,                     # is_close_match() result
         "score": score,
         "features": analysis if targeted else None,
         "participation": participation,
@@ -313,7 +346,9 @@ def respond(
         "reaction": reaction["reaction_text"],
         "reaction_source": reaction["source"],
         "fallback_reason": reaction.get("fallback_reason"),
-        "next_beat_index": None if done else beat_index + 1,
+        "beat_done": beat_done,
+        "beat_record": record,              # the saved log for this beat, once it's finished
+        "next_beat_index": None if (beat_done and is_last_beat) else (beat_index + 1 if beat_done else beat_index),
         "saved_session": saved,
     }
 

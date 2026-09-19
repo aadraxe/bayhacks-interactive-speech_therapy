@@ -89,21 +89,28 @@ def test_trailing_question_is_dropped_but_text_kept():
     assert parsed["reaction_text"] == "Yes, carrot!"
 
 
-def test_sentiment_maps_to_sound():
-    assert companion.sound_for("happy", False, False) == "happy_chime"
-    assert companion.sound_for("correct", False, True) == "happy_chime"
-    assert companion.sound_for("sad", False, False) == "gentle_encourage"
-    assert companion.sound_for("frustrated", False, False) == "soft_try_again"
-    assert companion.sound_for("neutral", False, False) == "soft_pop"
-    assert companion.sound_for("mystery", False, False) == config.DEFAULT_SOUND
-    # Final beat, answered well -> cheer; final beat, struggling -> the normal mapping.
-    assert companion.sound_for("happy", True, False) == "cheer"
-    assert companion.sound_for("neutral", True, True) == "cheer"
-    assert companion.sound_for("sad", True, False) == "gentle_encourage"
+def test_open_beat_sentiment_maps_to_sound():
+    assert companion.sound_for("happy", False) == "happy_chime"
+    assert companion.sound_for("correct", False) == "happy_chime"
+    assert companion.sound_for("sad", False) == "gentle_encourage"
+    assert companion.sound_for("frustrated", False) == "soft_try_again"
+    assert companion.sound_for("neutral", False) == "soft_pop"
+    assert companion.sound_for("mystery", False) == config.DEFAULT_SOUND
+    assert companion.sound_for("happy", True) == "cheer"
+    assert companion.sound_for("sad", True) == "gentle_encourage"
+
+
+def test_targeted_outcome_maps_to_sound():
+    assert companion.sound_for_outcome("match", False) == "happy_chime"
+    assert companion.sound_for_outcome("match", True) == "cheer"
+    assert companion.sound_for_outcome("retry", False) == "soft_try_again"
+    assert companion.sound_for_outcome("retry", True) == "soft_try_again"
+    assert companion.sound_for_outcome("not_yet", True) == "gentle_encourage"
 
 
 def test_every_mapped_sound_file_exists():
-    names = set(config.SOUND_FOR_SENTIMENT.values()) | {config.DEFAULT_SOUND, config.FINAL_SUCCESS_SOUND}
+    names = (set(config.SOUND_FOR_SENTIMENT.values()) | set(config.SOUND_FOR_OUTCOME.values())
+             | {config.DEFAULT_SOUND, config.FINAL_SUCCESS_SOUND})
     for name in names:
         assert (config.SOUNDS_DIR / f"{name}.wav").exists(), name
 
@@ -117,7 +124,7 @@ def test_every_story_cue_has_a_sound_file():
 
 def test_unusable_llm_reply_falls_back_to_neutral(monkeypatch):
     monkeypatch.setattr(companion, "_ask_groq", lambda *a, **k: "not json")
-    r = companion.react(stories.get("rosie-shares"), 0, "carrot", {"said_target": True})
+    r = companion.react(stories.get("rosie-shares"), 0, "carrot", outcome="match")
     assert r["sentiment"] == "neutral" and r["source"] == "fallback" and "carrot" in r["reaction_text"].lower()
 
 

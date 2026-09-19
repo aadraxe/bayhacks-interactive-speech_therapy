@@ -54,6 +54,36 @@ def get_active(session_id: str) -> dict | None:
 
 def record_beat(session: dict, beat_record: dict) -> None:
     session["beats"].append(beat_record)
+    session["pending_attempts"] = []
+
+
+def pending_attempts(session: dict) -> list:
+    """Tries so far on the current targeted beat (cleared when the beat is recorded)."""
+    return session.setdefault("pending_attempts", [])
+
+
+def targeted_record(index: int, target: str, attempts: list) -> dict:
+    """The saved log for one practice word, once it's finished (matched, or out of tries).
+
+    attempts: [{"attempt", "heard_text", "input", "match", "reason", "accuracy", "features"}]
+    Acoustics come from the successful attempt only (None if the word wasn't matched).
+    """
+    success = next((a for a in attempts if a["match"]), None)
+    best = success or max(attempts, key=lambda a: a["accuracy"])
+    inputs = {a["input"] for a in attempts}
+    return {
+        "index": index,
+        "type": "targeted",
+        "target": target,
+        "input": inputs.pop() if len(inputs) == 1 else "mixed",
+        "attempts_taken": success["attempt"] if success else "not_yet",
+        "final_result": "match" if success else "not_yet",
+        "attempts": [{k: a[k] for k in ("attempt", "heard_text", "input", "match", "reason", "accuracy")}
+                     for a in attempts],
+        "heard": best["heard_text"],
+        "accuracy": best["accuracy"],
+        "features": success["features"] if success else None,
+    }
 
 
 def finish(session_id: str) -> dict:
@@ -116,6 +146,13 @@ def for_report(sessions: list) -> list:
 
 # --- Summaries -----------------------------------------------------------------
 
+def _said(beat: dict) -> bool:
+    """Was the practice word said? Retry-loop records have final_result; older ones match."""
+    if "final_result" in beat:
+        return beat["final_result"] == "match"
+    return beat.get("match") in ("exact", "close")
+
+
 def summarize(beats: list) -> dict:
     targeted = [b for b in beats if b["type"] == "targeted"]
     opened = [b for b in beats if b["type"] == "open"]
@@ -128,7 +165,7 @@ def summarize(beats: list) -> dict:
     answered = [b for b in opened if b.get("responded")]
     return {
         "targeted_accuracy": round(sum(b["accuracy"] for b in targeted) / len(targeted), 2) if targeted else None,
-        "targets_said": sum(1 for b in targeted if b["match"] in ("exact", "close")),
+        "targets_said": sum(1 for b in targeted if _said(b)),
         "targets_total": len(targeted),
         **{key: mean(key) for key in FEATURE_KEYS},
         "acoustic_beats": len(measured),

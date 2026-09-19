@@ -630,7 +630,7 @@ async function sendAnswer(form, previewLabel) {
   thinking.remove();
   if (run !== convo.runId) return;
   convoMsg("");
-  convo.results.push({ beat: convo.story.beats[convo.beat], r });
+  if (r.beat_done) convo.results.push({ beat: convo.story.beats[r.beat_index], record: r.beat_record });
   renderChild(r);
   const src = r.reaction_source === "groq"
     ? `<span class="chip info">Groq</span>`
@@ -643,20 +643,37 @@ async function sendAnswer(form, previewLabel) {
   await playSpeech(speech);
   convo.busy = false;
   if (run !== convo.runId) return;
-  if (r.next_beat_index !== null) showBeat(r.next_beat_index);
+  if (!r.beat_done) retryBeat(r);                       // same word, next try
+  else if (r.next_beat_index !== null) showBeat(r.next_beat_index);
   else finishStory(r.saved_session);
 }
 
+// Retry loop: keep the same targeted beat open for the next try (no re-narration;
+// the companion's reply has just invited the child to say the word).
+function retryBeat(r) {
+  const beat = convo.story.beats[r.beat_index];
+  $("answer-label").textContent = `Try ${r.attempt + 1} of ${r.max_attempts}: say “${beat.target_response}”`;
+  $("convo-text").value = "";
+  setAnswering(true);
+  $("convo-rec").focus();
+}
+
 const MOOD_CLASS = { happy: "good", correct: "good", sad: "mid", frustrated: "mid", neutral: "" };
+const MATCH_LABEL = {
+  exact: "said the word", inflection: "word + ending", stretched: "stretched sounds", close: "close enough",
+  phonetic: "sounds the same", started_word: "said the start", dropped_start: "dropped the start",
+  different: "different word", no_response: "no answer",
+};
 
 function renderChild(r) {
   const chips = [];
-  if (r.score) {
-    const s = r.score;
-    const cls = s.match === "exact" ? "good" : s.match === "close" ? "mid" : "low";
-    const label = { exact: "said the word", close: "close", missed: "different word", no_response: "no answer" }[s.match];
-    chips.push(`<span class="chip ${cls}">${label} · accuracy ${Math.round(s.accuracy * 100)}%</span>`);
-    if (s.confidence !== null && s.confidence !== undefined) chips.push(`<span class="chip">recognition confidence ${Math.round(s.confidence * 100)}%</span>`);
+  if (r.match) {
+    const outcomeChip = { match: ["good", "✓ heard it"], retry: ["mid", "not yet · another try"], not_yet: ["mid", "not yet · moving on"] }[r.outcome];
+    chips.push(`<span class="chip">try ${r.attempt} of ${r.max_attempts}</span>`);
+    chips.push(`<span class="chip ${outcomeChip[0]}">${outcomeChip[1]}</span>`);
+    chips.push(`<span class="chip">${esc(MATCH_LABEL[r.match.reason] || r.match.reason)}</span>`);
+    chips.push(`<span class="chip">accuracy ${Math.round(r.score.accuracy * 100)}%</span>`);
+    if (r.score.confidence !== null && r.score.confidence !== undefined) chips.push(`<span class="chip">recognition confidence ${Math.round(r.score.confidence * 100)}%</span>`);
   }
   if (r.participation) {
     const p = r.participation;
@@ -683,22 +700,30 @@ function renderChild(r) {
 function finishStory(saved) {
   setAnswering(false);
   $("convo-progress").textContent = "Story complete";
-  const rows = convo.results.map(({ beat, r }, i) => {
-    const result = r.score
-      ? `${r.score.said_target ? "✓" : "✗"} ${Math.round(r.score.accuracy * 100)}%`
-      : r.participation.responded ? `responded (${r.participation.word_count} word${r.participation.word_count === 1 ? "" : "s"})` : "no answer";
-    const acoustics = r.features && r.features.mean_pitch !== null
-      ? `${r.features.mean_pitch} Hz · ${r.features.pitch_variation} st` : "–";
-    return `<tr><td>${i + 1}</td><td>${beat.type}</td><td>${esc(beat.target_response || "–")}</td><td>${esc(r.heard || "(nothing)")}</td><td>${result}</td><td>${acoustics}</td></tr>`;
+  const rows = convo.results.map(({ beat, record: b }, i) => {
+    let heard, result;
+    if (b.type === "targeted") {
+      heard = b.attempts.map((a) => a.heard_text || "(nothing)").join(" → ");
+      result = b.final_result === "match"
+        ? `✓ in ${b.attempts_taken} ${b.attempts_taken === 1 ? "try" : "tries"}`
+        : `not yet (${b.attempts.length} tries)`;
+    } else {
+      heard = b.heard || "(nothing)";
+      result = b.responded ? `responded (${b.word_count} word${b.word_count === 1 ? "" : "s"})` : "no answer";
+    }
+    const acoustics = b.features && b.features.mean_pitch !== null
+      ? `${b.features.mean_pitch} Hz · ${b.features.pitch_variation} st` : "–";
+    return `<tr><td>${i + 1}</td><td>${b.type}</td><td>${esc(beat.target_response || "–")}</td><td>${esc(heard)}</td><td>${result}</td><td>${acoustics}</td></tr>`;
   }).join("");
-  const targeted = convo.results.filter((x) => x.r.score);
-  const acc = targeted.length ? Math.round(100 * targeted.reduce((a, x) => a + x.r.score.accuracy, 0) / targeted.length) : 0;
+  const targeted = convo.results.map((x) => x.record).filter((b) => b.type === "targeted");
+  const said = targeted.filter((b) => b.final_result === "match").length;
+  const avgTries = targeted.length ? (targeted.reduce((n, b) => n + b.attempts.length, 0) / targeted.length).toFixed(1) : "–";
   const savedNote = !saved ? "not saved"
     : saved.mode === "voice" ? "saved to sessions.json ✓ · counts toward the progress report"
     : "saved to sessions.json ✓ · has typed answers, so it's left out of the progress report";
   addBubble("buddy", `<div class="who">Session summary · ${esc(savedNote)}</div>
-    <div>Targeted-word accuracy: <b>${acc}%</b> across ${targeted.length} words.</div>
-    <div class="summary-wrap"><table class="summary"><thead><tr><th>#</th><th>Type</th><th>Target</th><th>Heard</th><th>Result</th><th>Pitch</th></tr></thead><tbody>${rows}</tbody></table></div>`);
+    <div>Practice words said: <b>${said} of ${targeted.length}</b> · average tries per word: <b>${avgTries}</b></div>
+    <div class="summary-wrap"><table class="summary"><thead><tr><th>#</th><th>Type</th><th>Target</th><th>Heard (each try)</th><th>Result</th><th>Pitch</th></tr></thead><tbody>${rows}</tbody></table></div>`);
   say("The end! Thank you for reading with me today.", true);
   loadSessions();
   loadStatus();
