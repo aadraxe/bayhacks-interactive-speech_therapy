@@ -140,7 +140,7 @@ def test_full_session_is_saved_with_attempt_logs(client):
     targeted = [b for b in saved["beats"] if b["type"] == "targeted"]
     assert [b["attempts_taken"] for b in targeted] == [2, "not_yet", 1, 1]
     assert saved["summary"]["targets_said"] == 3
-    on_disk = sessions.load_all()
+    on_disk = json.loads(config.SESSIONS_FILE.read_text(encoding="utf-8"))
     assert on_disk[-1]["session_id"] == sid
 
 

@@ -73,10 +73,6 @@ CORS_ORIGINS = [
 # --- Storage --------------------------------------------------------------
 SESSIONS_FILE = DATA_DIR / "sessions.json"
 USERS_FILE = DATA_DIR / "users.json"
-# SQLite by default (file under data/). For deploy, set DATABASE_URL to Postgres
-# e.g. postgresql://user:pass@host:5432/storybuddy  (Railway/Render/Fly provide this).
-_default_sqlite = f"sqlite:///{(DATA_DIR / 'storybuddy.db').as_posix()}"
-DATABASE_URL = os.getenv("DATABASE_URL", _default_sqlite).strip() or _default_sqlite
 
 SAFETY_BANNER = (
     "StoryBuddy supports speech-therapy practice. It does not diagnose any "

@@ -20,8 +20,6 @@ htmlcov/
 data/sessions.json
 data/users.json
 data/settings.json
-data/storybuddy.db
-data/*.db
 data/tts_cache/
 data/recordings/
 recordings/

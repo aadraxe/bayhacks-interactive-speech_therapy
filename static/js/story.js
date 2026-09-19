@@ -136,13 +136,6 @@ function getToken() {
   return localStorage.getItem(AUTH_KEY);
 }
 
-function authHeaders(extra = {}) {
-  const headers = { ...extra };
-  const token = getToken();
-  if (token) headers.Authorization = `Bearer ${token}`;
-  return headers;
-}
-
 function setSession(username, token) {
   currentUser = username;
   localStorage.setItem(AUTH_KEY, token);
@@ -361,7 +354,7 @@ function prefetchBeat(i) {
 
 async function refreshStoryRotation() {
   try {
-    const data = await (await fetch("/api/stories", { headers: authHeaders() })).json();
+    const data = await (await fetch("/api/stories")).json();
     state.storyCards = data.stories;
     state.nextInRotation = data.next_in_rotation;
     if (!state.selectedStoryId && state.nextInRotation) {
@@ -398,7 +391,7 @@ async function startStory(storyId = null) {
   try {
     const res = await fetch("/api/session/start", {
       method: "POST",
-      headers: authHeaders({ "Content-Type": "application/json" }),
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ story_id: chosen }),
     });
     if (!res.ok) throw new Error(await errorText(res));
@@ -655,7 +648,7 @@ async function loadProgress() {
   $("progress-list").innerHTML = "";
   let rows;
   try {
-    rows = await (await fetch("/api/sessions", { headers: authHeaders() })).json();
+    rows = await (await fetch("/api/sessions")).json();
   } catch {
     $("progress-summary").textContent = "Could not load progress.";
     return;
@@ -976,7 +969,7 @@ async function loadReport({ force = false } = {}) {
   $("report-charts").hidden = true;
   $("report-closing").hidden = true;
   try {
-    const res = await fetch("/api/report", { method: "POST", headers: authHeaders() });
+    const res = await fetch("/api/report", { method: "POST" });
     if (!res.ok) throw new Error(await errorText(res));
     const data = await res.json();
     paintReport(data);
