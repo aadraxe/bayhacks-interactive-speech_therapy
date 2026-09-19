@@ -5,7 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>StoryBuddy</title>
   <meta name="description" content="StoryBuddy — interactive speech practice stories for kids.">
-  <link rel="stylesheet" href="/static/css/story.css">
+  <link rel="stylesheet" href="/static/css/mascot.css?v=sprout1">
+  <link rel="stylesheet" href="/static/css/story.css?v=sprout1">
+  <link rel="preload" href="/static/vendor/rive/rive.wasm" as="fetch" type="application/wasm" crossorigin>
+  <link rel="preload" href="/static/mascot/sobo.riv?v=1" as="fetch" crossorigin>
 </head>
 <body class="theme-home" data-theme="home">
   <div class="scene" id="scene" aria-hidden="true">
@@ -191,6 +194,6 @@
     </section>
   </div>
 
-  <script type="module" src="/static/js/story.js"></script>
+  <script type="module" src="/static/js/story.js?v=sprout1"></script>
 </body>
 </html>

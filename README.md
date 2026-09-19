@@ -1,6 +1,6 @@
 # StoryBuddy
 
-Interactive speech-practice stories for kids. A painted landscape and a soft cartoon bunny narrator (**Buddy**) guide each story beat, listen to the child’s answer, and reply with warm feedback.
+Interactive speech-practice stories for kids. A painted landscape and an animated Rive mascot narrator (**Mr. Sprout**, a sprout-headed forest sprite) guide each story beat, listen to the child’s answer, and reply with warm feedback.
 
 > **Safety:** StoryBuddy supports speech-therapy **practice**. It does not diagnose any condition and does not replace a speech therapist.
 
@@ -10,7 +10,7 @@ Interactive speech-practice stories for kids. A painted landscape and a soft car
 
 1. **Child signs in** (username + password; signup also asks for a parent email).
 2. **Picks a story** (or “Surprise me!”) against a storybook landscape.
-3. **Buddy narrates** each beat (ElevenLabs TTS), then listens (mic + STT).
+3. **Mr. Sprout narrates** each beat (ElevenLabs TTS), then listens (mic + STT).
 4. **Targeted practice words** get up to 3 gentle tries; open questions count as engagement.
 5. **Session is saved in SQL** (SQLite locally, Postgres when `DATABASE_URL` is set) with accuracy, attempts, and acoustic features.
 6. **Therapist report** (home → *Therapist report*) asks Groq for a parent/therapist summary plus chart specs, then renders a calm practice dashboard.
@@ -49,9 +49,28 @@ Then open:
 
 ## Frontend
 
-- **Landing page:** `static/landing.html` at `/`
-- **Child app:** `static/index.html` at `/app` — Buddy the bunny narrator, story picker, mic practice, therapist report
-- Mic answer or typed fallback; progress stars; confetti at the end
+The landing page (`static/landing.html`) and child-facing page (`static/index.html`) share one narrator, **Mr. Sprout**, an animated [Rive](https://rive.app) mascot (`static/mascot/sobo.riv`, runtime vendored in `static/vendor/rive/`, wrapper in `static/js/mascot.js`, styles in `static/css/mascot.css`).
+
+Mr. Sprout reacts to what the app is doing:
+
+| Mood | Rive artboard | When |
+|------|---------------|------|
+| `hello` | `SOBO-Hello` | waves on landing, after login, at story start |
+| `talking` | `SOBO-Talk` | ElevenLabs narration / reaction audio plays (mouth follows the audio loudness via the `mouthOpen` view-model input) |
+| `listening` | `SOBO-Listen` | mic is open, waiting for the child |
+| `thinking` | `SOBO-Listen` + CSS thought bubble | Groq / story-generation / report requests are pending |
+| `happy` | `SOBO-Yes` | positive reaction |
+| `sad` | `SOBO-Idle` + CSS droop and tear | sad / frustrated reaction |
+| `celebrate` | `SOBO-Yes` + CSS sparkles | story finished |
+| `idle` | `SOBO-Idle` | otherwise |
+
+Try it in the browser console: `SoboMascot.setAll("sad")`. Each mascot host exposes `data-mood` / `data-artboard`.
+
+Other frontend features:
+
+- Colorful sky scene with drifting clouds
+- Mic answer or typed fallback (same session API as the lab)
+- Progress stars after each reply; confetti at the end
 
 All story / scoring / TTS / STT logic stays on the FastAPI backend.
 
@@ -130,12 +149,12 @@ docker run --rm -p 8000:8000 --env-file .env `
 Served from `static/index.html` + `static/css/story.css` + `static/js/story.js`.
 
 - **Login / signup** — login: username + password; signup also requires **parent’s email** (SQL `users` table).
-- **Home** — painted landscape, bunny, story cards, *Surprise me!*, *My stars*, *Therapist report*, *Log out*.
+- **Home** — painted landscape, Mr. Sprout, story cards, *Surprise me!*, *My stars*, *Therapist report*, *Log out*.
 - **Story loop** — auto mic after narration; retry loop on practice words; soft reaction sounds + spoken companion line.
 - **My stars** — recent finished sessions and practice-word accuracy.
 - **Therapist report** — `POST /api/report`: parent / therapist / practice suggestion panels, stats, and trend charts from the report `charts` list (line charts when ≥3 spoken sessions; otherwise a calm placeholder). Open engagement is a bar/stat.
 
-Art assets: `static/img/` (`buddy-bunny.png`, `story-home.png`, per-story art).
+Art assets: `static/mascot/sobo.riv`, story landscapes under `static/img/`.
 
 ---
 

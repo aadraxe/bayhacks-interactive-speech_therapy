@@ -3,6 +3,10 @@
  * Loop matches the backend: start session → narrate beat → voice respond → reaction → next / finish.
  */
 import { AnswerListener } from "/static/js/storybuddy-audio.js";
+import { mountMascot, preloadMascot } from "/static/js/mascot.js?v=8";
+
+// Fetch the Rive runtime + Mr. Sprout .riv right away so the landing wave has no delay.
+preloadMascot();
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) =>
@@ -11,7 +15,6 @@ const esc = (s) => String(s).replace(/[&<>"]/g, (c) =>
 const QUIET_WAIT_MS = 15000;
 
 // Storybook painted scenes — same soft color schema as the home tree landscape.
-const BUNNY_SRC = "/static/img/buddy-bunny.png?v=14";
 const HOME_ART = "/static/img/story-home.png?v=2";
 
 const STORY_SCENES = {
@@ -54,33 +57,33 @@ const state = {
   selectedStoryId: null,
 };
 
-// ——— White bunny narrator (same art on every page) ————————————————
-
-function mountBuddy(hostId) {
-  const host = $(hostId);
-  host.innerHTML = `
-    <div class="buddy" role="img" aria-label="Story bunny">
-      <img class="buddy-art" src="${BUNNY_SRC}" alt="" draggable="false">
-      <span class="buddy-sparkles" aria-hidden="true"></span>
-    </div>`;
-  return host.querySelector(".buddy");
-}
+// ——— Mr. Sprout, the Rive mascot (same character on every screen) ———————————
+// Moods: idle · hello · talking · listening · thinking · happy · sad · celebrate.
+// Every mascot is kept in sync (only the one on the visible screen renders), so a mood
+// change always shows on whichever screen the child is looking at.
 
 const buddies = { auth: null, home: null, story: null, finish: null };
 
 function setMood(mood) {
-  const el = buddies.story || buddies.home || buddies.auth;
-  if (!el) return;
-  el.classList.remove("talking", "happy", "sad", "thinking", "celebrate", "listening");
-  if (mood) el.classList.add(mood);
+  const next = mood || "idle";
+  Object.values(buddies).forEach((m) => {
+    if (m && m.mood !== next) m.setMood(next);
+  });
 }
 
 function setAllMood(mood) {
-  Object.values(buddies).forEach((el) => {
-    if (!el) return;
-    el.classList.remove("talking", "happy", "sad", "thinking", "celebrate", "listening");
-    if (mood) el.classList.add(mood);
-  });
+  setMood(mood);
+}
+
+/** Wave hello; the mascot settles back to idle on its own after the wave. */
+function wave() {
+  setMood("hello");
+}
+
+/** Mascot on the screen the child is looking at right now. */
+function activeBuddy() {
+  const id = document.querySelector(".screen.active")?.id || "";
+  return buddies[id.replace("screen-", "")] || buddies.story || buddies.home || buddies.auth;
 }
 
 const SENTIMENT_MOOD = {
@@ -88,7 +91,7 @@ const SENTIMENT_MOOD = {
   correct: "happy",
   sad: "sad",
   frustrated: "sad",
-  neutral: null,
+  neutral: "idle",
 };
 
 // ——— Theme / scene ————————————————————————————————————————————————————
@@ -191,6 +194,7 @@ async function restoreSession() {
     const me = await res.json();
     setSession(me.username, token);
     showScreen("home");
+    wave();
     refreshStoryRotation();
     return true;
   } catch {
@@ -227,6 +231,7 @@ $("auth-form").addEventListener("submit", async (e) => {
     $("auth-parent-email").value = "";
     authMsg("");
     showScreen("home");
+    wave();
     refreshStoryRotation();
   } catch (err) {
     authMsg(err.message || "Could not sign in.", true);
@@ -246,7 +251,7 @@ $("btn-logout").addEventListener("click", async () => {
   clearSession();
   setAuthMode("login");
   showScreen("auth");
-  setAllMood("happy");
+  wave();
 });
 
 // ——— Screens ——————————————————————————————————————————————————————————
@@ -311,7 +316,22 @@ async function fetchSpeech(text, cache) {
   }
 }
 
-async function playSpeech(urlPromise) {
+let lipStop = null;
+
+/** Lip-sync the active mascot to state.audio (one analyser at a time so audio isn't doubled). */
+function startLipSync() {
+  stopLipSync();
+  try {
+    lipStop = activeBuddy()?.trackAudio(state.audio) || null;
+  } catch { lipStop = null; }
+}
+
+function stopLipSync() {
+  try { lipStop?.(); } catch { /* ignore */ }
+  lipStop = null;
+}
+
+async function playSpeech(urlPromise, after = null) {
   const run = state.runId;
   try {
     const url = await urlPromise;
@@ -320,14 +340,17 @@ async function playSpeech(urlPromise) {
     if (state.audio.src) URL.revokeObjectURL(state.audio.src);
     state.audio.src = url;
     setMood("talking");
+    startLipSync();
     await new Promise((resolve) => {
       state.audio.onended = resolve;
       state.audio.onpause = resolve;
       state.audio.play().catch(resolve);
     });
-    if (run === state.runId) setMood(null);
+    stopLipSync();
+    if (run === state.runId) setMood(after);
   } catch (e) {
-    setMood(null);
+    stopLipSync();
+    setMood(after);
     status(`Voice: ${e.message}`, true);
   }
 }
@@ -386,8 +409,9 @@ function setAnswering(on) {
 }
 
 async function startStory(storyId = null) {
-  state.runId++;
+  const run = ++state.runId;
   stopAudio();
+  stopLipSync();
   cancelListening();
   state.results = [];
   state.beat = 0;
@@ -395,6 +419,7 @@ async function startStory(storyId = null) {
   status("");
   const chosen = storyId || state.selectedStoryId || null;
   setLoading(true, "Opening the story…");
+  setMood("thinking"); // LLM is picking / writing the story
   try {
     const res = await fetch("/api/session/start", {
       method: "POST",
@@ -408,6 +433,7 @@ async function startStory(storyId = null) {
     state.selectedStoryId = started.story.id;
   } catch (e) {
     setLoading(false);
+    setMood(null);
     const hm = $("home-msg");
     if (hm) {
       hm.textContent = e.message || "Could not start the story.";
@@ -419,7 +445,9 @@ async function startStory(storyId = null) {
   applyTheme(state.story.id);
   $("story-title").textContent = state.story.title;
   showScreen("story");
-  setMood("happy");
+  wave(); // greet before the first narration
+  await new Promise((ok) => setTimeout(ok, 2200));
+  if (run !== state.runId) return;
   await showBeat(0);
 }
 
@@ -625,7 +653,7 @@ function finishStory() {
   showScreen("finish");
   setAllMood("celebrate");
   launchConfetti();
-  playSpeech(fetchSpeech("The end! Thank you for reading with me today.", true));
+  playSpeech(fetchSpeech("The end! Thank you for reading with me today.", true), "celebrate");
   refreshStoryRotation();
 }
 
@@ -971,6 +999,7 @@ async function loadReport({ force = false } = {}) {
   btn.disabled = true;
   btn.textContent = "Writing…";
   reportStatus("Asking the practice assistant to write the report…");
+  setMood("thinking"); // Groq is writing the report
   $("report-board").hidden = true;
   $("report-stats").hidden = true;
   $("report-charts").hidden = true;
@@ -984,6 +1013,7 @@ async function loadReport({ force = false } = {}) {
   } catch (err) {
     reportStatus(err.message || "Could not generate the report.", true);
   } finally {
+    setMood(null);
     btn.disabled = false;
     btn.textContent = "Generate again";
   }
@@ -1010,10 +1040,14 @@ $("btn-surprise").addEventListener("click", () => {
   startStory(null);
 });
 $("btn-again").addEventListener("click", () => {
+  stopAudio();
+  setMood(null);
   showScreen("home");
   refreshStoryRotation();
 });
 $("btn-finish-home").addEventListener("click", () => {
+  stopAudio();
+  setMood(null);
   showScreen("home");
   refreshStoryRotation();
 });
@@ -1022,6 +1056,8 @@ $("btn-home").addEventListener("click", () => {
   stopAudio();
   cancelListening();
   state.busy = false;
+  stopLipSync();
+  setMood(null);
   showScreen("home");
   refreshStoryRotation();
 });
@@ -1039,10 +1075,11 @@ $("btn-report-refresh").addEventListener("click", () => loadReport({ force: true
 
 // ——— Boot —————————————————————————————————————————————————————————————
 
-buddies.auth = mountBuddy("buddy-auth");
-buddies.home = mountBuddy("buddy-home");
-buddies.story = mountBuddy("buddy-story");
-buddies.finish = mountBuddy("buddy-finish");
+// Landing: Mr. Sprout waves hello as soon as the auth screen shows, then settles to idle.
+buddies.auth = mountMascot($("buddy-auth"), { initial: "hello", then: "idle" });
+buddies.home = mountMascot($("buddy-home"));
+buddies.story = mountMascot($("buddy-story"));
+buddies.finish = mountMascot($("buddy-finish"));
 setAuthMode("login");
 applyTheme("home");
 refreshStoryRotation();

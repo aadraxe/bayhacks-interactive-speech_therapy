@@ -186,20 +186,21 @@ body {
   justify-content: center;
   min-height: 280px;
   padding-left: 0;
-  justify-self: center;
+  justify-self: stretch;   /* mascot is canvas-based: no intrinsic width, so fill the column */
+  width: 100%;
 }
 
 .buddy-stage {
   position: relative;
-  width: min(280px, 95%);
-  aspect-ratio: 3 / 4;
+  width: min(300px, 95%);
+  aspect-ratio: 1 / 1.1;
   animation: none;
   transform: none;
   z-index: 2;
 }
 
-/* Story/home keep a soft panel; login bunny sits on the landscape */
-/* Transparent bunny — no white outer plate */
+/* Story/home keep a soft panel; login mascot sits on the landscape */
+/* Transparent mascot — no white outer plate */
 #screen-auth .buddy-wrap,
 #screen-home .buddy-wrap,
 #screen-story .buddy-wrap,
@@ -214,7 +215,7 @@ body {
   width: 100%;
   height: 100%;
   margin: 0;
-  aspect-ratio: 3 / 4;
+  aspect-ratio: auto;
   background: transparent;
   border-radius: 0;
   box-shadow: none;
@@ -229,26 +230,7 @@ body {
   display: none;
 }
 
-.buddy-stage .buddy {
-  width: 100%;
-  height: 100%;
-  animation: none !important;
-  transform: none !important;
-}
-
-.buddy-stage .buddy-art {
-  width: 100%;
-  height: 100%;
-  transform: none !important;
-  animation: none !important;
-  border-radius: 0;
-  filter: drop-shadow(0 10px 14px rgba(40, 50, 30, 0.3));
-}
-
-.buddy-ground-shadow,
-.buddy-light {
-  display: none;
-}
+/* Sobo mascot sits directly on the landscape — no plate, no blur */
 
 .auth-card {
   background: var(--bubble);
@@ -290,7 +272,8 @@ body {
   }
   .auth-mascot { align-items: center; justify-self: center; min-height: 200px; }
   .auth-card { justify-self: center; margin-left: 0; max-width: 100%; }
-  .buddy-stage { width: min(260px, 70vw); }
+  .buddy-stage { width: min(210px, 58vw); }
+  .auth-mascot { min-height: 0; }
 }
 
 .brand {
@@ -563,75 +546,12 @@ body {
   place-items: end center;
 }
 
-/* Keep login/home bunny still — no bounce or float */
-#screen-auth .buddy,
-#screen-home .buddy {
-  animation: none !important;
-  transform: none !important;
-}
-.buddy-art {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  object-position: bottom center;
-  display: block;
-  user-select: none;
-  -webkit-user-drag: none;
-  filter: drop-shadow(0 8px 12px rgba(40, 50, 30, 0.25));
-}
-.buddy-sparkles {
-  position: absolute;
-  inset: 8% 10% auto;
-  height: 20%;
-  opacity: 0;
-  pointer-events: none;
-  background:
-    radial-gradient(circle, #f0d060 0 35%, transparent 36%) 10% 40% / 12px 12px no-repeat,
-    radial-gradient(circle, #f0d060 0 35%, transparent 36%) 85% 20% / 10px 10px no-repeat,
-    radial-gradient(circle, #f0d060 0 35%, transparent 36%) 70% 70% / 8px 8px no-repeat;
-}
-.buddy.celebrate .buddy-sparkles {
-  opacity: 1;
-  animation: sparklePop 0.7s ease infinite alternate;
-}
+/* Story screen: let Mr. Sprout use its full grid column */
+#screen-story .buddy-wrap { width: min(240px, 100%); }
+@media (max-width: 640px) { #screen-story .buddy-wrap { width: min(200px, 55vw); } }
 
-.buddy.talking { animation: talkBob 1.1s ease-in-out infinite; }
-.buddy.listening { animation: listenTilt 2.8s ease-in-out infinite; }
-.buddy.happy { animation: happyBounce 0.55s ease-in-out 2; }
-.buddy.sad { animation: sadSway 2.4s ease-in-out infinite; filter: saturate(0.85); }
-.buddy.thinking { animation: thinkTilt 2.2s ease-in-out infinite; }
-.buddy.celebrate { animation: celebrate 0.7s ease-in-out 3; }
-
-@keyframes talkBob {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-2px); }
-}
-@keyframes listenTilt {
-  0%, 100% { transform: rotate(-2deg); }
-  50% { transform: rotate(2deg); }
-}
-@keyframes happyBounce {
-  0%, 100% { transform: translateY(0); }
-  40% { transform: translateY(-8px); }
-  70% { transform: translateY(-2px); }
-}
-@keyframes sadSway {
-  0%, 100% { transform: translateY(4px) rotate(-2deg); }
-  50% { transform: translateY(8px) rotate(2deg); }
-}
-@keyframes thinkTilt {
-  0%, 100% { transform: rotate(-5deg); }
-  50% { transform: rotate(5deg); }
-}
-@keyframes celebrate {
-  0%, 100% { transform: scale(1) rotate(0); }
-  25% { transform: scale(1.06) rotate(-7deg); }
-  75% { transform: scale(1.06) rotate(7deg); }
-}
-@keyframes sparklePop {
-  from { opacity: 0.4; transform: scale(0.9); }
-  to { opacity: 1; transform: scale(1.1); }
-}
+/* Mr. Sprout (the Rive mascot) lives in /static/css/mascot.css, shared with the landing page. */
+.buddy-wrap > div:first-child { position: relative; }
 
 .speech {
   background: var(--bubble);

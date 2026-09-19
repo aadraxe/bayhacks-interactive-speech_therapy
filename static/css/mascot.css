@@ -1,0 +1,125 @@
+/* Mr. Sprout — the Rive mascot (shared by the landing page and the app). */
+/* ——— Mr. Sprout (Rive mascot) ————————————————————————————————————————————
+   DOM from mascot.js:  .sobo > canvas.sobo-canvas.sobo-front|.sobo-back
+                        + .sobo-thought / .sobo-tear / .sobo-sparkles
+   Classes on .sobo:    sobo-<mood>, sobo-thinking|sad|celebrate, sobo-ready, sobo-failed */
+
+.sobo {
+  /* The artboard has ~25% empty margin around Mr. Sprout, so render it 1.75x the host, centred on
+     the body and dropped so the feet touch the host's bottom edge (overflow is transparent). */
+  position: absolute;
+  left: -37.5%;
+  bottom: 0;
+  width: 175%;
+  aspect-ratio: 1;
+  transform: translateY(17%);
+  background: transparent;
+  --sobo-shadow: drop-shadow(0 8px 10px rgba(40, 50, 30, 0.28));
+  transform-origin: 50% 92%;
+  user-select: none;
+}
+.sobo-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  background: transparent;
+  filter: var(--sobo-shadow);
+  transition: opacity 0.18s ease, filter 0.4s ease, transform 0.4s ease;
+  transform-origin: 50% 92%;
+  pointer-events: none;
+}
+.sobo-front { opacity: 1; z-index: 1; }
+.sobo-back  { opacity: 0; z-index: 0; pointer-events: none; }
+
+/* Extras hidden until a mood needs them */
+.sobo-thought, .sobo-tear, .sobo-sparkles { position: absolute; display: none; pointer-events: none; z-index: 2; }
+
+/* Load failed -> nothing to draw; keep the layout box but hide the (empty) canvases */
+.sobo-failed .sobo-canvas { display: none; }
+
+/* — thinking: Listen pose + extra head tilt + pulsing thought dots — */
+.sobo-thinking .sobo-canvas { animation: soboThinkTilt 2.4s ease-in-out infinite; }
+.sobo-thinking .sobo-thought {
+  display: flex; gap: 6px; align-items: center;
+  left: 55%; top: 12%;
+  padding: 10px 14px;
+  background: rgba(255, 255, 255, 0.92);
+  border-radius: 999px;
+  box-shadow: 0 3px 8px rgba(40, 50, 30, 0.22);
+}
+.sobo-thought::after {   /* little bubble tail toward the head */
+  content: ""; position: absolute; left: 6px; bottom: -9px;
+  width: 10px; height: 10px; border-radius: 50%; background: rgba(255,255,255,0.92);
+  box-shadow: -5px 6px 0 -1px rgba(255,255,255,0.92);
+}
+.sobo-thought i {
+  width: 10px; height: 10px; border-radius: 50%; background: #6d8a5c;
+  animation: soboDot 1.2s ease-in-out infinite;
+}
+.sobo-thought i:nth-child(2) { animation-delay: 0.2s; }
+.sobo-thought i:nth-child(3) { animation-delay: 0.4s; }
+
+/* — sad: dimmed, slumped, slow sway, one tear — */
+.sobo-sad .sobo-canvas {
+  filter: var(--sobo-shadow) saturate(0.7) brightness(0.92);
+  animation: soboSlump 3.2s ease-in-out infinite;
+}
+.sobo-sad .sobo-tear {
+  display: block;
+  left: 41%; top: 43%;
+  width: 6%; height: 8%;
+  background: radial-gradient(circle at 35% 30%, #fff 0 12%, #8ec9ff 13% 60%, #5aa3e6 100%);
+  border-radius: 50% 50% 55% 55% / 65% 65% 40% 40%;
+  transform-origin: 50% 0;
+  animation: soboTear 2.6s ease-in infinite;
+  opacity: 0;
+}
+
+/* — celebrate: bounce + twinkle burst — */
+.sobo-celebrate .sobo-canvas { animation: soboBounce 0.6s ease-in-out infinite; }
+.sobo-celebrate .sobo-sparkles {
+  display: block;
+  inset: 0;
+  background:
+    radial-gradient(circle, #fff6c2 0 30%, #ffd84d 31% 55%, transparent 60%) 26% 32% / 26px 26px no-repeat,
+    radial-gradient(circle, #ffffff 0 30%, #ffe9a0 31% 55%, transparent 60%) 74% 24% / 22px 22px no-repeat,
+    radial-gradient(circle, #fff 0 30%, #ffc2de 31% 55%, transparent 60%)    80% 52% / 24px 24px no-repeat,
+    radial-gradient(circle, #fff 0 30%, #b6f0c6 31% 55%, transparent 60%)    20% 62% / 22px 22px no-repeat,
+    radial-gradient(circle, #fff6c2 0 30%, #ffd84d 31% 55%, transparent 60%) 42% 15% / 20px 20px no-repeat;
+  animation: soboTwinkle 0.8s ease-in-out infinite alternate;
+}
+
+@keyframes soboThinkTilt {
+  0%, 100% { transform: rotate(-4deg); }
+  50%      { transform: rotate(4deg) translateX(2%); }
+}
+@keyframes soboDot {
+  0%, 70%, 100% { transform: translateY(0); opacity: 0.45; }
+  35%           { transform: translateY(-4px); opacity: 1; }
+}
+@keyframes soboSlump {
+  0%, 100% { transform: scale(1.02, 0.94) rotate(-1.5deg); }
+  50%      { transform: scale(1.02, 0.92) rotate(1.5deg) translateY(1%); }
+}
+@keyframes soboTear {
+  0%   { opacity: 0; transform: translateY(0) scale(0.6); }
+  15%  { opacity: 1; transform: translateY(0) scale(1); }
+  80%  { opacity: 0.9; transform: translateY(260%) scale(1); }
+  100% { opacity: 0; transform: translateY(330%) scale(0.9); }
+}
+@keyframes soboBounce {
+  0%, 100% { transform: translateY(0) scale(1, 1); }
+  40%      { transform: translateY(-7%) scale(0.98, 1.03); }
+  75%      { transform: translateY(0) scale(1.03, 0.96); }
+}
+@keyframes soboTwinkle {
+  from { opacity: 0.35; transform: scale(0.94); }
+  to   { opacity: 1;    transform: scale(1.06); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sobo-canvas, .sobo-thought i, .sobo-tear, .sobo-sparkles { animation: none !important; transition: none; }
+  .sobo-sad .sobo-tear { opacity: 1; }
+}
+
