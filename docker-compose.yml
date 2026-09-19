@@ -1,0 +1,38 @@
+# Local deploy stack: app + Postgres
+#   docker compose up --build
+#
+# App: http://127.0.0.1:8000
+# Set ELEVENLABS_API_KEY and GROQ_API_KEY in a .env file next to this compose file.
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: storybuddy
+      POSTGRES_PASSWORD: storybuddy
+      POSTGRES_DB: storybuddy
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U storybuddy -d storybuddy"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  web:
+    build: .
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql://storybuddy:storybuddy@db:5432/storybuddy
+      PORT: "8000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  pgdata:
