@@ -16,4 +16,5 @@ httpx==0.28.1
 
 # Acoustic analysis (Praat)
 praat-parselmouth==0.4.5
-numpy==1.26.4
+# 1.26.x has no wheels for Python 3.13+; 2.x is required on newer Pythons.
+numpy>=1.26.4,<3

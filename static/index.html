@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>StoryBuddy</title>
+  <meta name="description" content="StoryBuddy — interactive speech practice stories for kids.">
+  <link rel="stylesheet" href="/static/css/story.css">
+</head>
+<body class="theme-home" data-theme="home">
+  <div class="scene" id="scene" aria-hidden="true">
+    <div class="scene-art" id="scene-art"></div>
+    <div class="scene-live" id="scene-live"></div>
+  </div>
+
+  <div class="loading" id="loading" aria-live="polite">Getting ready…</div>
+  <div class="confetti" id="confetti" hidden></div>
+
+  <div class="app">
+    <!-- AUTH (login / signup) -->
+    <section class="screen active" id="screen-auth" aria-label="Log in">
+      <header class="brand">
+        <h1>StoryBuddy</h1>
+        <p class="tagline" id="auth-tagline">Log in to start reading</p>
+      </header>
+
+      <div class="auth-layout">
+        <div class="auth-mascot">
+          <div class="buddy-stage" id="buddy-stage">
+            <div class="buddy-wrap auth-buddy">
+              <div id="buddy-auth"></div>
+            </div>
+          </div>
+        </div>
+
+        <form class="auth-card" id="auth-form">
+          <label class="field">
+            <span>Username</span>
+            <input id="auth-username" name="username" type="text" autocomplete="username"
+                   maxlength="24" required placeholder="your name">
+          </label>
+          <label class="field">
+            <span>Password</span>
+            <input id="auth-password" name="password" type="password" autocomplete="current-password"
+                   maxlength="72" required placeholder="••••">
+          </label>
+          <p class="auth-msg" id="auth-msg" role="status"></p>
+          <button class="btn big" type="submit" id="auth-submit">Log in</button>
+          <button class="btn ghost" type="button" id="auth-toggle">New here? Create an account</button>
+        </form>
+      </div>
+    </section>
+
+    <!-- HOME -->
+    <section class="screen" id="screen-home" aria-label="Home">
+      <header class="brand">
+        <h1>StoryBuddy</h1>
+        <p class="tagline" id="home-hello">Hi!</p>
+      </header>
+
+      <div class="home-stage">
+        <div class="buddy-wrap">
+          <div id="buddy-home"></div>
+        </div>
+      </div>
+
+      <p class="pick-label">Which story do you want?</p>
+      <div class="story-pick" id="story-pick" role="list"></div>
+
+      <div class="home-actions">
+        <button class="btn ghost" id="btn-surprise" type="button">Surprise me!</button>
+        <button class="btn ghost" id="btn-progress" type="button">My stars</button>
+        <button class="btn ghost" id="btn-logout" type="button">Log out</button>
+        <p class="auth-msg" id="home-msg" role="status"></p>
+      </div>
+    </section>
+
+    <!-- STORY -->
+    <section class="screen" id="screen-story" aria-label="Story">
+      <div class="story-top">
+        <button class="btn ghost" id="btn-home" type="button" style="padding:8px 16px;font-size:0.95rem">← Home</button>
+        <h2 class="title" id="story-title">Story</h2>
+        <div class="progress-pips" id="pips" aria-label="Story progress"></div>
+      </div>
+
+      <div class="story-stage">
+        <div class="buddy-wrap">
+          <div id="buddy-story"></div>
+        </div>
+        <div id="speech-area">
+          <div class="speech" id="speech-bubble">
+            <div class="narration" id="narration"></div>
+            <div class="prompt" id="prompt"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="answer-bar" id="answer-bar" hidden>
+        <p class="answer-hint" id="answer-hint">Your turn — say it out loud!</p>
+        <div class="mic-wrap">
+          <button class="mic-btn" id="btn-mic" type="button" aria-label="Listening" disabled>
+            <span class="ring" aria-hidden="true"></span>
+            <span class="mic-waves" aria-hidden="true"><i></i><i></i><i></i></span>
+            <svg class="mic-svg" viewBox="0 0 24 24" width="40" height="40" aria-hidden="true">
+              <path fill="currentColor" d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.9V21h2v-3.1A7 7 0 0 0 19 11h-2z"/>
+            </svg>
+          </button>
+          <div class="level-bar" aria-hidden="true"><span id="level-fill"></span></div>
+        </div>
+        <div class="timer" id="rec-timer"></div>
+      </div>
+      <p class="status-msg" id="status-msg"></p>
+    </section>
+
+    <!-- FINISH -->
+    <section class="screen" id="screen-finish" aria-label="Story complete">
+      <div class="finish-card">
+        <div class="buddy-wrap" style="width:150px;margin:0 auto 8px">
+          <div id="buddy-finish"></div>
+        </div>
+        <h2>You did it!</h2>
+        <p>Great storytelling today!</p>
+        <div class="score" id="finish-score">★</div>
+        <p class="moral" id="finish-moral"></p>
+        <div class="finish-actions">
+          <button class="btn mint" id="btn-again">Another story</button>
+          <button class="btn ghost" id="btn-finish-home">Home</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- PROGRESS -->
+    <section class="screen" id="screen-progress" aria-label="Progress">
+      <div class="story-top">
+        <button class="btn ghost" id="btn-progress-back" type="button" style="padding:8px 16px;font-size:0.95rem">← Back</button>
+        <h2 class="title">Your stars</h2>
+        <span></span>
+      </div>
+      <div class="finish-card" style="max-width:560px;width:100%">
+        <p id="progress-summary" style="font-weight:700;color:var(--muted)">Loading…</p>
+        <div id="progress-list" style="text-align:left;margin-top:16px"></div>
+      </div>
+    </section>
+  </div>
+
+  <script type="module" src="/static/js/story.js"></script>
+</body>
+</html>

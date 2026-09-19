@@ -72,6 +72,7 @@ CORS_ORIGINS = [
 
 # --- Storage --------------------------------------------------------------
 SESSIONS_FILE = DATA_DIR / "sessions.json"
+USERS_FILE = DATA_DIR / "users.json"
 
 SAFETY_BANNER = (
     "StoryBuddy supports speech-therapy practice. It does not diagnose any "

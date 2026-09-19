@@ -5,13 +5,13 @@ import os
 import tempfile
 from pathlib import Path
 
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import FastAPI, File, Form, Header, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from app import acoustics, companion, config, report, scoring, sessions, settings, stories, voice
+from app import acoustics, companion, config, report, scoring, sessions, settings, stories, users, voice
 from app.seed import seed_demo_sessions
 
 MAX_UPLOAD_BYTES = 20 * 1024 * 1024
@@ -19,6 +19,7 @@ MAX_SPEAK_CHARS = 600  # one beat's narration + prompt; stops a stray call burni
 DEMO_STORY_ID = "rosie-shares"  # the story the demo sessions pretend to have used
 
 TAGS = [
+    {"name": "Account", "description": "Sign up, log in, and stay signed in."},
     {"name": "Story session", "description": "The main loop: start a session, send each answer, get the reaction and the next beat."},
     {"name": "Stories", "description": "Pre-written 6-beat stories in stories/ (4 targeted words + 2 open questions, a moral, a sound cue per beat)."},
     {"name": "Narrator", "description": "Text-to-speech audio, reaction sounds, and the voice/speed/volume settings."},
@@ -141,6 +142,52 @@ def speak(body: SpeakRequest):
     except voice.VoiceError as exc:
         raise HTTPException(status_code=502, detail=str(exc))
     return Response(content=audio, media_type="audio/mpeg")
+
+
+# --- Accounts ------------------------------------------------------------------
+
+class AuthBody(BaseModel):
+    username: str = Field(min_length=1, max_length=24)
+    password: str = Field(min_length=1, max_length=72)
+
+
+def _bearer(authorization: str | None) -> str | None:
+    if not authorization:
+        return None
+    kind, _, token = authorization.partition(" ")
+    if kind.lower() != "bearer" or not token:
+        return None
+    return token.strip()
+
+
+@app.post("/api/auth/signup", tags=["Account"], summary="Create a new account")
+def auth_signup(body: AuthBody):
+    try:
+        return users.signup(body.username, body.password)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
+@app.post("/api/auth/login", tags=["Account"], summary="Log in")
+def auth_login(body: AuthBody):
+    try:
+        return users.login(body.username, body.password)
+    except ValueError as exc:
+        raise HTTPException(status_code=401, detail=str(exc))
+
+
+@app.post("/api/auth/logout", tags=["Account"], summary="Log out")
+def auth_logout(authorization: str | None = Header(default=None)):
+    users.logout(_bearer(authorization))
+    return {"ok": True}
+
+
+@app.get("/api/auth/me", tags=["Account"], summary="Who is signed in")
+def auth_me(authorization: str | None = Header(default=None)):
+    user = users.user_from_token(_bearer(authorization))
+    if not user:
+        raise HTTPException(status_code=401, detail="Please log in.")
+    return user
 
 
 # --- Narrator voice ------------------------------------------------------------

@@ -18,6 +18,7 @@ htmlcov/
 # --- Runtime data (created by the app, specific to each install) -----------------
 # Practice sessions may hold a child's answers: keep them local.
 data/sessions.json
+data/users.json
 data/settings.json
 data/tts_cache/
 data/recordings/
