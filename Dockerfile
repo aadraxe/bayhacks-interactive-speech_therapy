@@ -14,12 +14,11 @@ COPY app ./app
 COPY static ./static
 COPY stories ./stories
 COPY sounds ./sounds
-COPY samples ./samples
 COPY data ./data
 COPY run.py .
 
-# Runtime dirs (SQLite file + caches). Prefer a mounted volume or Postgres in production.
-RUN mkdir -p data/recordings data/tts_cache samples sounds
+# Runtime dirs (samples are gitignored; create empty for the lab tools).
+RUN mkdir -p data/recordings data/tts_cache samples
 
 ENV PORT=8000
 EXPOSE 8000
