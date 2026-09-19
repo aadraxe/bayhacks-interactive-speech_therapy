@@ -114,6 +114,8 @@
   .voice .actions { display:flex; gap:6px; margin-top:4px; }
   .voice .actions button { padding:5px 14px; font-size:.85rem; }
 
+  h3.sub { font-size:1rem; margin:22px 0 2px; }
+
   /* Story picker */
   .story-picker { border:1px solid var(--line); border-radius:12px; padding:12px 14px; margin-bottom:14px; background:#fcfbf9; }
   .field-label { font-weight:600; font-size:.9rem; }
@@ -195,22 +197,25 @@
     </div>
     <div class="voices" id="voice-list"><div class="msg">Loading voices…</div></div>
     <div class="msg" id="voice-msg"></div>
+
+    <h3 class="sub">Reaction sounds</h3>
+    <p class="hint">Soft sounds made once with ElevenLabs Sound Effects, each at most 2 seconds with a gentle fade-in and a quiet peak. <b>Reaction sounds</b> (<code>sounds/</code>): the companion's reply picks a mood, and the mood picks the sound. <b>Story cues</b> (<code>sounds/story/</code>, quieter still): each beat's scene sound, played just before the narration. One volume controls both.</p>
+    <div class="speed-row">
+      <label for="sound-volume">Sound volume <b id="sound-volume-label">50%</b></label>
+      <input type="range" id="sound-volume" min="0" max="1" step="0.05" value="0.5">
+    </div>
+    <div class="row" id="sound-list"></div>
   </section>
 
   <section class="card" id="convo-card">
     <h2><span class="step">3–6</span> Story conversation</h2>
-    <p class="hint">The full loop: the narrator reads a beat and asks you something, you answer out loud, StoryBuddy transcribes and scores it, and the AI companion reacts before moving on. Finished stories are saved to sessions.json.</p>
+    <p class="hint">The full loop: the narrator reads a beat and asks you something, you answer out loud, StoryBuddy transcribes and scores it, then a soft sound plays for the reaction's mood and the companion answers before moving on. Finished stories are saved to sessions.json.</p>
 
     <div class="story-picker">
       <div class="row">
         <label for="story-select" class="field-label">Story</label>
         <select id="story-select"></select>
       </div>
-      <form class="row new-story" id="story-form">
-        <input type="text" id="story-theme" placeholder="Theme (optional), e.g. a day at the beach" maxlength="80" autocomplete="off">
-        <input type="text" id="story-words" placeholder="4 practice words (optional), e.g. sun, boat, fish, shell" autocomplete="off">
-        <button type="submit" class="ghost" id="story-write">✨ Write a new story</button>
-      </form>
       <div class="story-preview" id="story-preview"></div>
     </div>
 
@@ -260,7 +265,7 @@
       <li class="done"><span class="step">2</span>Acoustic engine: extract_features()</li>
       <li class="done"><span class="step">3</span>Transcription (Scribe v2 + keyterms) and score_response()</li>
       <li class="done"><span class="step">4</span>Narrator voice: speak(), slower speed, voice picker</li>
-      <li class="done"><span class="step">5</span>Stories: AI-written 6-beat stories, saved in stories.json</li>
+      <li class="done"><span class="step">5</span>Stories: 3 pre-written stories in stories/, rotated or chosen</li>
       <li class="done"><span class="step">6</span>Session loop: one beat at a time, saved to sessions.json</li>
       <li class="done"><span class="step">7</span>Seeded past sessions for the progress trend</li>
       <li class="done"><span class="step">8</span>Progress report (Groq)</li>
@@ -314,31 +319,8 @@ document.querySelectorAll(".tabs button").forEach((btn) => btn.addEventListener(
 }));
 
 // --- Audio helpers ------------------------------------------------------------
-// Decode any browser-playable audio and re-encode as 16 kHz mono 16-bit WAV,
-// which the backend's Praat engine reads directly.
-async function toWav(blob) {
-  const ctx = new AudioContext();
-  let decoded;
-  try { decoded = await ctx.decodeAudioData(await blob.arrayBuffer()); }
-  finally { ctx.close(); }
-  const rate = 16000;
-  const offline = new OfflineAudioContext(1, Math.max(1, Math.ceil(decoded.duration * rate)), rate);
-  const src = offline.createBufferSource();
-  src.buffer = decoded; src.connect(offline.destination); src.start();
-  const samples = (await offline.startRendering()).getChannelData(0);
-
-  const buf = new ArrayBuffer(44 + samples.length * 2), v = new DataView(buf);
-  const str = (o, s) => [...s].forEach((c, i) => v.setUint8(o + i, c.charCodeAt(0)));
-  str(0, "RIFF"); v.setUint32(4, 36 + samples.length * 2, true); str(8, "WAVE");
-  str(12, "fmt "); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
-  v.setUint32(24, rate, true); v.setUint32(28, rate * 2, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true);
-  str(36, "data"); v.setUint32(40, samples.length * 2, true);
-  for (let i = 0; i < samples.length; i++) {
-    const s = Math.max(-1, Math.min(1, samples[i]));
-    v.setInt16(44 + i * 2, s < 0 ? s * 0x8000 : s * 0x7fff, true);
-  }
-  return new Blob([buf], { type: "audio/wav" });
-}
+// WAV conversion lives in /static/js/storybuddy-audio.js (shared with the frontend);
+// the module script at the end of the page exposes it here as toWav().
 
 async function analyse(blob, filename, sourceLabel) {
   setMsg("Analysing…");
@@ -523,16 +505,29 @@ function addBubble(cls, html) {
 function stopAudio() { convo.audio.pause(); convo.audio.currentTime = 0; }
 
 // Speak `text` in the narrator voice; resolves when playback ends (or right away if voice is off).
-async function say(text, cache) {
-  if (!$("convo-voice").checked) return;
-  const run = convo.runId;
+// Fetch narrator audio for `text`; resolves to an object URL (or null if voice is off / failed).
+async function fetchSpeech(text, cache) {
+  if (!$("convo-voice").checked) return null;
   try {
     const res = await fetch("/api/speak", {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ text, cache }),
     });
     if (!res.ok) throw new Error(await errorText(res));
-    const url = URL.createObjectURL(await res.blob());
+    return URL.createObjectURL(await res.blob());
+  } catch (e) { convoMsg(`Voice: ${e.message}`, true); return null; }
+}
+
+async function say(text, cache) {
+  return playSpeech(fetchSpeech(text, cache));
+}
+
+// Play audio from fetchSpeech(); resolves when playback ends.
+async function playSpeech(urlPromise) {
+  const run = convo.runId;
+  try {
+    const url = await urlPromise;
+    if (!url) return;
     if (run !== convo.runId) return;  // story was restarted meanwhile
     stopAudio();
     if (convo.audio.src) URL.revokeObjectURL(convo.audio.src);
@@ -584,7 +579,8 @@ async function startStory() {
     convo.sessionId = started.session_id;
   } catch { convoMsg("Could not start the story.", true); return; }
   $("convo-start").textContent = "Restart story";
-  addBubble("buddy", `<div class="who">StoryBuddy</div><div><b>${esc(convo.story.title)}</b></div>`);
+  addBubble("buddy", `<div class="who">StoryBuddy</div><div><b>${esc(convo.story.title)}</b></div>
+    <div class="hint" style="margin:2px 0 0">Moral: ${esc(convo.story.moral)} · practice words: ${convo.story.target_words.map(esc).join(", ")}</div>`);
   showBeat(0);
 }
 
@@ -593,9 +589,10 @@ async function showBeat(i) {
   const beat = convo.story.beats[i];
   convo.beat = i;
   $("convo-progress").textContent = `Beat ${i + 1} of ${convo.story.beats.length}`;
-  const kind = beat.type === "targeted"
+  const kind = (beat.type === "targeted"
     ? `<span class="chip info">targeted · say “${esc(beat.target_response)}”</span>`
-    : `<span class="chip info">open question</span>`;
+    : `<span class="chip info">open question</span>`) +
+    (beat.sound_effect ? ` <span class="chip" title="Soft scene sound played before the narration">🔈 ${esc(beat.sound_effect)}</span>` : "");
   const spoken = `${beat.narration} ${beat.prompt}`;
   addBubble("buddy", `<div class="who">StoryBuddy · beat ${i + 1} ${kind} ${replayButton(spoken, true)}</div>
     <div>${esc(beat.narration)}</div><div class="prompt">${esc(beat.prompt)}</div>`);
@@ -603,7 +600,10 @@ async function showBeat(i) {
   setAnswering(true);
   $("convo-text").value = "";
   prefetchBeat(i + 1);
-  await say(spoken, true);
+  // Scene cue first (soft, under 2 s), then the narration, fetched while the cue plays.
+  const narration = fetchSpeech(spoken, true);
+  await playSound(beat.sound_effect_url, parseFloat($("sound-volume").value));
+  await playSpeech(narration);
   if (run === convo.runId && !convo.busy) $("convo-rec").focus();
 }
 
@@ -635,13 +635,19 @@ async function sendAnswer(form, previewLabel) {
   const src = r.reaction_source === "groq"
     ? `<span class="chip info">Groq</span>`
     : `<span class="chip mid" title="${esc(r.fallback_reason || "")}">built-in line · ${esc(r.fallback_reason || "fallback")}</span>`;
-  addBubble("buddy react", `<div class="who">StoryBuddy ${src} ${replayButton(r.reaction, false)}</div><div>${esc(r.reaction)}</div>`);
-  await say(r.reaction, false);
+  const mood = `<span class="chip ${MOOD_CLASS[r.sentiment] || ""}">${esc(r.sentiment)} → 🔔 ${esc(r.sound.name)}</span>`;
+  addBubble("buddy react", `<div class="who">StoryBuddy ${mood} ${src} ${replayButton(r.reaction, false)}</div><div>${esc(r.reaction)}</div>`);
+  // Soft sound for the mood, then the spoken reply (fetched while the sound plays).
+  const speech = fetchSpeech(r.reaction, false);
+  await playSound(r.sound.url, r.sound.volume);
+  await playSpeech(speech);
   convo.busy = false;
   if (run !== convo.runId) return;
   if (r.next_beat_index !== null) showBeat(r.next_beat_index);
   else finishStory(r.saved_session);
 }
+
+const MOOD_CLASS = { happy: "good", correct: "good", sad: "mid", frustrated: "mid", neutral: "" };
 
 function renderChild(r) {
   const chips = [];
@@ -696,6 +702,7 @@ function finishStory(saved) {
   say("The end! Thank you for reading with me today.", true);
   loadSessions();
   loadStatus();
+  loadStories();  // rotation moves on
 }
 
 $("convo-start").addEventListener("click", startStory);
@@ -840,56 +847,74 @@ async function saveVoice(change) {
 $("speed").addEventListener("input", showSpeed);
 $("speed-save").addEventListener("click", () => saveVoice({ speed: parseFloat($("speed").value) }));
 
-// --- Stories (Step 5) ---------------------------------------------------------------
-let storyCards = [];
-
-function storyLabel(s) {
-  const when = s.created ? ` · ${s.created.slice(0, 10)}` : "";
-  const src = s.source === "built-in" ? " (built-in)" : "";
-  return `${s.title}${src}${when}`;
-}
+// --- Stories (Step 5): pre-written, in stories/ -------------------------------------
+let storyCards = [], nextInRotation = null;
 
 function showStoryPreview() {
-  const s = storyCards.find((c) => c.id === $("story-select").value);
-  $("story-preview").innerHTML = s
-    ? `<b>${esc(s.title)}</b>${s.main_character ? ` · ${esc(s.main_character)}${s.helper ? ` and ${esc(s.helper)}` : ""}` : ""} · practice words: <b>${(s.target_words || []).map(esc).join(", ")}</b>${s.theme ? ` · theme: ${esc(s.theme)}` : ""}`
-    : "";
+  const id = $("story-select").value || nextInRotation;
+  const s = storyCards.find((c) => c.id === id);
+  if (!s) { $("story-preview").textContent = ""; return; }
+  $("story-preview").innerHTML = `<b>${esc(s.title)}</b> · moral: ${esc(s.moral)}<br>
+    practice sound${s.target_sounds.length === 1 ? "" : "s"} <b>${s.target_sounds.map((x) => "/" + esc(x) + "/").join(" ")}</b> ·
+    words: <b>${s.target_words.map(esc).join(", ")}</b>`;
 }
 
-async function loadStories(selectId) {
-  try { storyCards = await (await fetch("/api/stories")).json(); }
+async function loadStories() {
+  let data;
+  try { data = await (await fetch("/api/stories")).json(); }
   catch { $("story-preview").textContent = "Could not load stories."; return; }
-  const select = $("story-select");
-  // Newest AI story first, built-in story last.
-  const ordered = [...storyCards.slice(1).reverse(), storyCards[0]];
-  select.innerHTML = ordered.map((s) => `<option value="${esc(s.id)}">${esc(storyLabel(s))}</option>`).join("");
-  if (selectId) select.value = selectId;
+  storyCards = data.stories; nextInRotation = data.next_in_rotation;
+  const next = storyCards.find((s) => s.id === nextInRotation);
+  const select = $("story-select"), keep = select.value;
+  select.innerHTML = `<option value="">Next in rotation: ${esc(next ? next.title : "?")}</option>` +
+    storyCards.map((s) => `<option value="${esc(s.id)}">${esc(s.title)}</option>`).join("");
+  select.value = storyCards.some((s) => s.id === keep) ? keep : "";
   showStoryPreview();
 }
 
 $("story-select").addEventListener("change", showStoryPreview);
 
-$("story-form").addEventListener("submit", async (e) => {
-  e.preventDefault();
-  const btn = $("story-write");
-  const words = $("story-words").value.split(/[,\s]+/).map((w) => w.trim()).filter(Boolean);
-  btn.disabled = true; btn.textContent = "Writing…";
-  $("story-preview").textContent = "The AI is writing and checking a new story (usually 3–10 seconds)…";
-  try {
-    const res = await fetch("/api/stories", {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ theme: $("story-theme").value || null, target_words: words.length ? words : null }),
-    });
-    if (!res.ok) throw new Error(await errorText(res));
-    const story = await res.json();
-    await loadStories(story.id);
-    if (story.source === "fallback") {
-      $("story-preview").innerHTML += `<div class="notes">${esc(story.note)} Try again in a minute.</div>`;
-    }
-  } catch (e) {
-    $("story-preview").innerHTML = `<span class="error" style="color:var(--red)">${esc(e.message)}</span>`;
-  } finally { btn.disabled = false; btn.textContent = "✨ Write a new story"; }
+// --- Reaction sounds (sentiment -> soft sound) ----------------------------------------
+const reactionSound = new Audio();
+
+// Plays a sound at the given volume and resolves when it ends (never blocks the story).
+function playSound(url, volume) {
+  if (!url || !$("convo-voice").checked) return Promise.resolve();
+  return new Promise((resolve) => {
+    reactionSound.pause();
+    reactionSound.src = url;
+    reactionSound.volume = Math.max(0, Math.min(1, volume));
+    reactionSound.onended = resolve;
+    reactionSound.onerror = resolve;
+    reactionSound.play().catch(resolve);
+    setTimeout(resolve, 3000);  // sounds are under 2 s; never wait longer
+  });
+}
+
+async function loadSounds() {
+  let data;
+  try { data = await (await fetch("/api/sounds")).json(); } catch { return; }
+  $("sound-volume").value = data.volume;
+  $("sound-volume-label").textContent = Math.round(data.volume * 100) + "%";
+  const whoPlays = {};
+  Object.entries(data.sentiment_map).forEach(([sentiment, name]) => (whoPlays[name] = [...(whoPlays[name] || []), sentiment]));
+  (whoPlays[data.final_success] = whoPlays[data.final_success] || []).push("last beat, answered well");
+  $("sound-list").innerHTML = Object.entries(data.sounds).map(([name, url]) =>
+    `<button class="ghost" data-sound="${esc(url)}" title="${esc((whoPlays[name] || []).join(", "))}">▶ ${esc(name)} <span class="hint" style="margin:0">(${esc((whoPlays[name] || ["unused"]).join(", "))})</span></button>`
+  ).join("") +
+    `<span class="field-label" style="flex-basis:100%;margin-top:6px">Story cues</span>` +
+    Object.entries(data.story_cues || {}).map(([name, url]) =>
+      `<button class="ghost" data-sound="${esc(url)}">▶ ${esc(name)}</button>`).join("");
+  $("sound-list").querySelectorAll("[data-sound]").forEach((b) => b.addEventListener("click", () => {
+    reactionSound.pause(); reactionSound.src = b.dataset.sound;
+    reactionSound.volume = parseFloat($("sound-volume").value); reactionSound.play();
+  }));
+}
+
+$("sound-volume").addEventListener("input", () => {
+  $("sound-volume-label").textContent = Math.round(parseFloat($("sound-volume").value) * 100) + "%";
 });
+$("sound-volume").addEventListener("change", () => saveVoice({ sound_volume: parseFloat($("sound-volume").value) }));
 
 // --- Progress report (Steps 7-8) ------------------------------------------------
 function progressMsg(text, isError = false) {
@@ -986,10 +1011,15 @@ $("seed-add").addEventListener("click", () => seedAction("POST", (r) => `Added $
 $("seed-remove").addEventListener("click", () => seedAction("DELETE", (r) => `Removed demo sessions. ${r.total} real session${r.total === 1 ? "" : "s"} left.`));
 
 loadVoices();
+loadSounds();
 loadStories();
 loadSessions();
 loadStatus();
 loadSamples();
+</script>
+<script type="module">
+  import { toWav } from "/static/js/storybuddy-audio.js";
+  window.toWav = toWav;
 </script>
 </body>
 </html>

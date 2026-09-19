@@ -1,0 +1,56 @@
+{
+  "id": "sammy-swims",
+  "title": "Sammy Swims to the Island",
+  "moral": "Being brave means trying, even when you feel a little scared.",
+  "target_sounds": ["s"],
+  "beats": [
+    {
+      "id": 1,
+      "type": "targeted",
+      "narration": "Sammy the duckling lived by a quiet pond. The warm sun was shining on the water, and the reeds moved slowly in the breeze.",
+      "prompt": "Can you say the word: sun?",
+      "target_response": "sun",
+      "sound_effect": "birds"
+    },
+    {
+      "id": 2,
+      "type": "open",
+      "narration": "The other ducklings swam to a little island in the middle of the pond. Sammy stayed on the shore. The water looked very big to Sammy.",
+      "prompt": "How do you think Sammy feels?",
+      "target_response": null,
+      "sound_effect": "water"
+    },
+    {
+      "id": 3,
+      "type": "targeted",
+      "narration": "Mama Duck came close to Sammy. Mama Duck said, you can go slowly, one small paddle at a time. Sammy put one foot in the water to start the swim.",
+      "prompt": "Can you say the word: swim?",
+      "target_response": "swim",
+      "sound_effect": "splash"
+    },
+    {
+      "id": 4,
+      "type": "targeted",
+      "narration": "Sammy paddled a little way. Then Sammy rested on a flat stone in the water. The stone was warm from the sun.",
+      "prompt": "Can you say the word: stone?",
+      "target_response": "stone",
+      "sound_effect": "water"
+    },
+    {
+      "id": 5,
+      "type": "open",
+      "narration": "Sammy was almost at the island. The other ducklings called out, come on, Sammy, you can do it! Sammy kept paddling, slow and steady.",
+      "prompt": "What would you like to say to Sammy right now?",
+      "target_response": null,
+      "sound_effect": "water"
+    },
+    {
+      "id": 6,
+      "type": "targeted",
+      "narration": "Sammy reached the island. Sammy felt a little scared at the start, but Sammy tried anyway. Sammy gave a big, proud smile.",
+      "prompt": "Can you say the word: smile?",
+      "target_response": "smile",
+      "sound_effect": "birds"
+    }
+  ]
+}

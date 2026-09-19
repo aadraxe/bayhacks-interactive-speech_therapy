@@ -38,20 +38,28 @@ _lock = threading.Lock()
 
 
 def get() -> dict:
-    """Current narrator settings: {"voice_id", "speed"}."""
-    current = {"voice_id": config.ELEVENLABS_VOICE_ID, "speed": config.ELEVENLABS_SPEED}
+    """Current settings: {"voice_id", "speed", "sound_volume"}."""
+    current = {
+        "voice_id": config.ELEVENLABS_VOICE_ID,
+        "speed": config.ELEVENLABS_SPEED,
+        "sound_volume": config.SOUND_VOLUME,
+    }
     if SETTINGS_FILE.exists():
         try:
             stored = json.loads(SETTINGS_FILE.read_text(encoding="utf-8"))
-            current.update({k: stored[k] for k in ("voice_id", "speed") if k in stored})
+            current.update({k: stored[k] for k in current if k in stored})
         except (OSError, ValueError):
             pass
     return current
 
 
-def update(voice_id: str | None = None, speed: float | None = None) -> dict:
+def update(voice_id: str | None = None, speed: float | None = None, sound_volume: float | None = None) -> dict:
     with _lock:
         current = get()
+        if sound_volume is not None:
+            if not 0.0 <= sound_volume <= 1.0:
+                raise ValueError("Sound volume must be between 0 and 1.")
+            current["sound_volume"] = round(sound_volume, 2)
         if voice_id is not None:
             if voice_id not in {v["id"] for v in NARRATOR_VOICES}:
                 raise ValueError("Unknown voice.")

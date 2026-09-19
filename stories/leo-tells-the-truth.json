@@ -1,0 +1,56 @@
+{
+  "id": "leo-tells-the-truth",
+  "title": "Leo Tells the Truth",
+  "moral": "Telling the truth helps us fix problems together.",
+  "target_sounds": ["l"],
+  "beats": [
+    {
+      "id": 1,
+      "type": "targeted",
+      "narration": "Leo the little lion lived in a cozy den with Grandma Lulu. By the window, Grandma Lulu kept a yellow flower in a yellow pot.",
+      "prompt": "Can you say the word: yellow?",
+      "target_response": "yellow",
+      "sound_effect": "birds"
+    },
+    {
+      "id": 2,
+      "type": "open",
+      "narration": "Leo was bouncing a ball inside the den. The ball bumped the pot, and the pot tipped over. Some soil spilled onto the floor.",
+      "prompt": "What should Leo do now?",
+      "target_response": null,
+      "sound_effect": "bump"
+    },
+    {
+      "id": 3,
+      "type": "targeted",
+      "narration": "Leo walked to Grandma Lulu. Leo said, I was bouncing my ball, and it bumped the pot. Leo held the ball and told Grandma Lulu everything.",
+      "prompt": "Can you say the word: ball?",
+      "target_response": "ball",
+      "sound_effect": "footsteps"
+    },
+    {
+      "id": 4,
+      "type": "targeted",
+      "narration": "Grandma Lulu gave Leo a gentle hug. Grandma Lulu said, thank you for telling me. Let us clean it up together.",
+      "prompt": "Can you say the word: clean?",
+      "target_response": "clean",
+      "sound_effect": "sweep"
+    },
+    {
+      "id": 5,
+      "type": "open",
+      "narration": "Leo swept the soil into a little pile. Grandma Lulu put the plant back in the pot and gave it some water.",
+      "prompt": "How do you think Leo feels now?",
+      "target_response": null,
+      "sound_effect": "sweep"
+    },
+    {
+      "id": 6,
+      "type": "targeted",
+      "narration": "The yellow flower stood tall by the window again. Leo told the truth, and Leo and Grandma Lulu fixed the problem together. Leo smiled at the flower.",
+      "prompt": "Can you say the word: flower?",
+      "target_response": "flower",
+      "sound_effect": "birds"
+    }
+  ]
+}

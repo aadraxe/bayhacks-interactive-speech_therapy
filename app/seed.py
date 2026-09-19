@@ -10,30 +10,42 @@ from datetime import datetime, timedelta
 
 from app import scoring, sessions
 
-# What the "child" said for each target word, oldest session first. Scored with the real
-# score_response(), so demo accuracy numbers mean exactly what live ones do.
-HEARD_BY_SESSION = [
-    {"kite": "kite", "brave": "bay", "climb": "", "friend": "fen"},
-    {"kite": "kite", "brave": "bave", "climb": "", "friend": "fen"},
-    {"kite": "kite", "brave": "bave", "climb": "kime", "friend": "friend"},
-    {"kite": "kite", "brave": "brave", "climb": "kime", "friend": "friend"},
-    {"kite": "kite", "brave": "brave", "climb": "clim", "friend": "friend"},
-    {"kite": "kite", "brave": "brave", "climb": "climb", "friend": "frend"},
+# How each of the story's four practice words went, oldest session first.
+#   exact = said it; close = near miss (e.g. "brav"); missed = a different sound; quiet = no answer.
+# Heard text is built from the real word and scored with the real score_response(), so demo
+# accuracy numbers mean exactly what live ones do.
+OUTCOMES_BY_SESSION = [
+    ["exact", "missed", "quiet", "close"],
+    ["exact", "close", "quiet", "close"],
+    ["exact", "close", "missed", "exact"],
+    ["exact", "exact", "missed", "exact"],
+    ["exact", "exact", "close", "exact"],
+    ["exact", "exact", "exact", "close"],
 ]
 
 # Open-question answers: participation grows from one short answer to two full ones.
 OPEN_ANSWERS_BY_SESSION = [
     ["", "happy"],
-    ["climb", "happy"],
-    ["climb the tree", "happy kite"],
-    ["Pip should climb up", "the rabbit is happy"],
-    ["Pip can climb up the tree slowly", "happy because the kite came back"],
-    ["Pip should climb the tree and get the kite", "the rabbit feels happy and says thank you"],
+    ["help", "happy"],
+    ["help the friend", "happy now"],
+    ["share with the friend", "the friend is happy"],
+    ["go and help the friend right away", "happy because they helped"],
+    ["go over and help the friend who is alone", "happy and thankful, and they are friends now"],
 ]
 
 PITCH_VARIATION = [1.6, 1.8, 2.1, 2.4, 2.7, 3.0]  # semitones, rising = more expressive
 SPEAKING_RATE = [2.2, 2.3, 2.5, 2.6, 2.8, 2.9]    # syllables per second
 PAUSES = [3, 3, 2, 2, 1, 1]                      # per targeted answer, on average
+
+
+def heard_for(word: str, outcome: str) -> str:
+    if outcome == "exact":
+        return word
+    if outcome == "close":
+        return word[:-1] if len(word) > 3 else word + "s"
+    if outcome == "missed":
+        return word[:2]
+    return ""
 
 
 def seed_demo_sessions(story: dict, weeks: int = 6) -> list:
@@ -42,12 +54,12 @@ def seed_demo_sessions(story: dict, weeks: int = 6) -> list:
     seeded = []
     for k in range(weeks):
         date = today - timedelta(weeks=weeks - k)
-        heard = HEARD_BY_SESSION[k]
+        outcomes = iter(OUTCOMES_BY_SESSION[k])
         open_answers = iter(OPEN_ANSWERS_BY_SESSION[k])
         beats = []
         for index, beat in enumerate(story["beats"]):
             if beat["type"] == "targeted":
-                said = heard.get(beat["target_response"], beat["target_response"])
+                said = heard_for(beat["target_response"], next(outcomes))
                 score = scoring.score_response(said, beat["target_response"])
                 beats.append({
                     "index": index, "type": "targeted", "target": beat["target_response"],

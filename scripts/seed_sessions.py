@@ -8,7 +8,8 @@ Real sessions are never touched. Demo sessions carry "seeded": true.
 
 import sys
 
-from app import sessions, storygen
+from app import sessions, stories
+from app.main import DEMO_STORY_ID
 from app.seed import seed_demo_sessions
 
 
@@ -17,7 +18,7 @@ def main() -> None:
         remaining = sessions.replace_seeded([])
         print(f"Removed demo sessions. {len(remaining)} real session(s) remain.")
         return
-    all_sessions = sessions.replace_seeded(seed_demo_sessions(storygen.demo_story()))
+    all_sessions = sessions.replace_seeded(seed_demo_sessions(stories.get(DEMO_STORY_ID)))
     for s in all_sessions:
         m = s["summary"]
         tag = "demo" if s.get("seeded") else s.get("mode", "")

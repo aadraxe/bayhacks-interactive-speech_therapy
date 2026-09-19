@@ -1,0 +1,56 @@
+{
+  "id": "rosie-shares",
+  "title": "Rosie Shares a Carrot",
+  "moral": "Sharing helps friends feel happy.",
+  "target_sounds": ["r"],
+  "beats": [
+    {
+      "id": 1,
+      "type": "targeted",
+      "narration": "Rosie the rabbit lived in a small burrow under an old tree. One morning, Rosie pulled a big orange carrot out of the garden.",
+      "prompt": "Can you say the word: carrot?",
+      "target_response": "carrot",
+      "sound_effect": "birds"
+    },
+    {
+      "id": 2,
+      "type": "open",
+      "narration": "Gray clouds came, and soft rain began to fall. Rosie saw Ferdy the frog sitting alone in the wet grass. Ferdy looked cold and hungry.",
+      "prompt": "What should Rosie do?",
+      "target_response": null,
+      "sound_effect": "rain"
+    },
+    {
+      "id": 3,
+      "type": "targeted",
+      "narration": "Rosie hopped over to Ferdy. Rosie held up a red umbrella, so Ferdy could stay dry under the red umbrella too.",
+      "prompt": "Can you say the word: red?",
+      "target_response": "red",
+      "sound_effect": "hop"
+    },
+    {
+      "id": 4,
+      "type": "targeted",
+      "narration": "Rosie wanted to share. Rosie broke the carrot into two pieces and gave one piece to Ferdy. Now both friends had something to eat.",
+      "prompt": "Can you say the word: share?",
+      "target_response": "share",
+      "sound_effect": "crunch"
+    },
+    {
+      "id": 5,
+      "type": "open",
+      "narration": "Ferdy ate the carrot and smiled a big smile. Ferdy said, thank you, Rosie. Rosie felt warm inside, even in the rain.",
+      "prompt": "How do you think Ferdy feels now?",
+      "target_response": null,
+      "sound_effect": "rain"
+    },
+    {
+      "id": 6,
+      "type": "targeted",
+      "narration": "The rain stopped, and the sun came out. Rosie and Ferdy saw a rainbow over the garden. Rosie shared, and now Rosie had a new friend.",
+      "prompt": "Can you say the word: rainbow?",
+      "target_response": "rainbow",
+      "sound_effect": "birds"
+    }
+  ]
+}

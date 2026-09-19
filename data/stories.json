@@ -1,0 +1,56 @@
+[
+  {
+    "title": "A Sunny Park Adventure",
+    "main_character": "Milo",
+    "helper": "Luna",
+    "beats": [
+      {
+        "type": "targeted",
+        "narration": "Milo the rabbit hopped to the bright park. A red kite fluttered high above the trees.",
+        "prompt": "Can you say the word kite?",
+        "target_response": "kite"
+      },
+      {
+        "type": "open",
+        "narration": "Milo saw the kite tangled in a low branch. It could not fly free.",
+        "prompt": "What should Milo try to do?",
+        "target_response": null
+      },
+      {
+        "type": "targeted",
+        "narration": "Milo gently pulled the kite loose with a small stick. The kite swayed slowly.",
+        "prompt": "Can you say the word stick?",
+        "target_response": "stick"
+      },
+      {
+        "type": "targeted",
+        "narration": "Luna the squirrel arrived with a bright ribbon. Luna tied the ribbon to the kite.",
+        "prompt": "Can you say the word ribbon?",
+        "target_response": "ribbon"
+      },
+      {
+        "type": "open",
+        "narration": "The kite began to rise. Milo felt excited and a little nervous about the height.",
+        "prompt": "How does Milo feel right now?",
+        "target_response": null
+      },
+      {
+        "type": "targeted",
+        "narration": "Together Milo and Luna let the kite soar high. The park glowed with gentle wind and happy smiles.",
+        "prompt": "Can you say the word wind?",
+        "target_response": "wind"
+      }
+    ],
+    "target_words": [
+      "kite",
+      "stick",
+      "ribbon",
+      "wind"
+    ],
+    "id": "a-sunny-park-adventure-835f",
+    "created": "2026-09-19T10:47:11",
+    "theme": "a day at the park",
+    "source": "groq",
+    "attempts": 1
+  }
+]

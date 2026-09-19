@@ -31,16 +31,45 @@ ELEVENLABS_STT_MODEL = os.getenv("ELEVENLABS_STT_MODEL", "scribe_v2")
 GROQ_BASE_URL = "https://api.groq.com/openai/v1"
 GROQ_MODEL = os.getenv("GROQ_MODEL", "openai/gpt-oss-120b")
 
+# --- Reaction sounds ----------------------------------------------------------
+# Soft sounds in sounds/ (made once by scripts/make_sounds.py), played before the spoken
+# reaction. The companion's reply picks the sentiment; this map picks the sound.
+SOUNDS_DIR = BASE_DIR / "sounds"
+SOUND_FOR_SENTIMENT = {
+    "happy": "happy_chime",
+    "correct": "happy_chime",
+    "sad": "gentle_encourage",
+    "frustrated": "soft_try_again",
+    "neutral": "soft_pop",
+}
+DEFAULT_SOUND = "soft_pop"        # when the reply is invalid or the sentiment is unknown
+FINAL_SUCCESS_SOUND = "cheer"     # last beat, answered well
+# Playback volume for these sounds, 0.0-1.0 (they're already mastered quietly).
+# Changeable in the app; this is the starting value.
+SOUND_VOLUME = float(os.getenv("SOUND_VOLUME", "0.5"))
+
+# --- Frontend (CORS) --------------------------------------------------------
+# Origins allowed to call the API from a browser, comma-separated. Defaults cover the
+# usual dev servers (Vite 5173, Create React App / Next.js 3000). Pages served by this
+# backend itself (the Lab) don't need an entry.
+CORS_ORIGINS = [
+    o.strip()
+    for o in os.getenv(
+        "CORS_ORIGINS",
+        "http://localhost:5173,http://127.0.0.1:5173,http://localhost:3000,http://127.0.0.1:3000",
+    ).split(",")
+    if o.strip()
+]
+
 # --- Storage --------------------------------------------------------------
 SESSIONS_FILE = DATA_DIR / "sessions.json"
-STORIES_FILE = DATA_DIR / "stories.json"
 
 SAFETY_BANNER = (
     "StoryBuddy supports speech-therapy practice. It does not diagnose any "
     "condition and does not replace a speech therapist."
 )
 
-for _d in (DATA_DIR, RECORDINGS_DIR, SAMPLES_DIR):
+for _d in (DATA_DIR, RECORDINGS_DIR, SAMPLES_DIR, SOUNDS_DIR):
     _d.mkdir(parents=True, exist_ok=True)
 
 
