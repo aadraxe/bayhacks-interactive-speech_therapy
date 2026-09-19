@@ -432,6 +432,7 @@ def progress_report():
         raise HTTPException(status_code=409, detail="No spoken sessions yet. Finish a story out loud, or add demo sessions.")
     return {
         "report": result["report"],
+        "charts": result.get("charts") or [],
         "source": result["source"],
         "note": result.get("note"),
         "model": config.GROQ_MODEL if result["source"] == "groq" else None,

@@ -835,6 +835,314 @@ body {
   justify-content: center;
 }
 
+/* —— Therapist report dashboard (demo) —— */
+#screen-report {
+  max-width: 960px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.report-dash {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding-bottom: 28px;
+}
+
+.report-dash-top {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 12px;
+  align-items: center;
+}
+
+.report-dash-heading {
+  text-align: center;
+  min-width: 0;
+}
+
+.report-eyebrow {
+  margin: 0;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(47, 56, 46, 0.72);
+}
+
+.report-dash-heading h2 {
+  margin: 2px 0 0;
+  font-family: var(--font-display);
+  font-size: clamp(1.45rem, 4vw, 1.9rem);
+  font-weight: 800;
+  color: #2f382e;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.55);
+}
+
+.report-status {
+  margin: 0;
+  text-align: center;
+  font-weight: 700;
+  color: var(--muted);
+  min-height: 1.4em;
+}
+.report-status.error { color: var(--coral-deep); }
+
+.report-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.report-charts {
+  background: rgba(255, 252, 245, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  border-radius: 22px;
+  padding: 16px 16px 12px;
+  box-shadow: 0 10px 28px var(--shadow);
+}
+
+.report-charts-title {
+  margin: 0 0 12px;
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #2f382e;
+}
+
+.report-charts-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.report-chart {
+  background: rgba(248, 246, 238, 0.9);
+  border: 1px solid rgba(210, 218, 196, 0.85);
+  border-radius: 16px;
+  padding: 12px 12px 10px;
+  min-height: 148px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.report-chart.lead {
+  border-color: rgba(168, 192, 144, 0.95);
+  background: rgba(244, 248, 236, 0.95);
+}
+
+.report-chart.neutral {
+  border-color: rgba(196, 204, 212, 0.9);
+  background: rgba(244, 246, 248, 0.92);
+}
+
+.report-chart-label {
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.report-chart-value {
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #2f382e;
+  line-height: 1.2;
+}
+
+.report-chart-placeholder {
+  flex: 1;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--muted);
+  padding: 12px 8px;
+  line-height: 1.35;
+}
+
+.report-chart svg {
+  width: 100%;
+  height: 72px;
+  display: block;
+}
+
+.report-chart-bar {
+  margin-top: 4px;
+  height: 14px;
+  border-radius: 999px;
+  background: rgba(200, 210, 190, 0.55);
+  overflow: hidden;
+}
+
+.report-chart-bar > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #8faf7a 0%, #6fa87a 100%);
+  min-width: 0;
+}
+
+.report-chart-note {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.report-stat {
+  background: rgba(255, 252, 245, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.75);
+  border-radius: 18px;
+  padding: 12px 14px;
+  box-shadow: 0 8px 20px var(--shadow);
+  text-align: center;
+}
+
+.report-stat .label {
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.report-stat .value {
+  font-family: var(--font-display);
+  font-size: 1.55rem;
+  font-weight: 800;
+  color: #2f382e;
+  margin-top: 2px;
+  line-height: 1.15;
+}
+
+.report-stat .hint {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+.report-stat .spark {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 4px;
+  height: 28px;
+  margin-top: 8px;
+}
+
+.report-stat .spark i {
+  display: block;
+  width: 8px;
+  border-radius: 4px 4px 2px 2px;
+  background: linear-gradient(180deg, var(--mint) 0%, var(--mint-deep) 100%);
+  min-height: 4px;
+}
+
+.report-board {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.report-panel {
+  background: rgba(255, 252, 245, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  border-radius: 22px;
+  padding: 18px 18px 16px;
+  box-shadow: 0 10px 28px var(--shadow);
+  text-align: left;
+}
+
+.report-panel-practice {
+  grid-column: 1 / -1;
+}
+
+.report-panel h3 {
+  margin: 0 0 10px;
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: #2f382e;
+}
+
+.report-panel-parent { border-top: 5px solid var(--sun); }
+.report-panel-therapist { border-top: 5px solid var(--mint); }
+.report-panel-practice { border-top: 5px solid var(--coral); }
+
+.report-panel-body {
+  font-size: 1.02rem;
+  font-weight: 600;
+  line-height: 1.5;
+  color: var(--ink);
+}
+
+.report-panel-body p { margin: 0 0 10px; }
+.report-panel-body p:last-child { margin-bottom: 0; }
+.report-panel-body ul {
+  margin: 0;
+  padding-left: 0;
+  list-style: none;
+  display: grid;
+  gap: 8px;
+}
+.report-panel-body li {
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: rgba(232, 240, 220, 0.55);
+  border: 1px solid rgba(200, 216, 180, 0.7);
+}
+.report-panel-body li.watch {
+  background: rgba(255, 236, 220, 0.7);
+  border-color: rgba(232, 180, 140, 0.75);
+}
+.report-panel-body li.improved {
+  background: rgba(220, 240, 228, 0.75);
+  border-color: rgba(150, 200, 160, 0.8);
+}
+.report-panel-body li.stable {
+  background: rgba(236, 240, 248, 0.75);
+  border-color: rgba(180, 196, 220, 0.75);
+}
+.report-panel-body b { font-weight: 800; }
+
+.report-closing {
+  margin: 4px 0 0;
+  text-align: center;
+  font-size: 0.9rem;
+  font-weight: 700;
+  font-style: italic;
+  color: var(--muted);
+  background: rgba(255, 252, 245, 0.88);
+  border-radius: 16px;
+  padding: 12px 16px;
+  box-shadow: 0 6px 16px var(--shadow);
+}
+
+.report-meta-line {
+  margin: 0;
+  text-align: center;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: rgba(47, 56, 46, 0.65);
+}
+
+@media (max-width: 720px) {
+  .report-dash-top {
+    grid-template-columns: 1fr;
+    justify-items: stretch;
+  }
+  .report-dash-top .btn { width: 100%; }
+  .report-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .report-charts-grid { grid-template-columns: 1fr; }
+  .report-board { grid-template-columns: 1fr; }
+  .report-panel-practice { grid-column: auto; }
+}
+
 .confetti {
   position: fixed; inset: 0;
   pointer-events: none; z-index: 50; overflow: hidden;

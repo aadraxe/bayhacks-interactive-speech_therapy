@@ -153,6 +153,23 @@ def _said(beat: dict) -> bool:
     return beat.get("match") in ("exact", "close")
 
 
+def _attempts_for(beat: dict) -> int | None:
+    taken = beat.get("attempts_taken")
+    if isinstance(taken, int) and taken > 0:
+        return taken
+    if isinstance(beat.get("attempts"), list) and beat["attempts"]:
+        return len(beat["attempts"])
+    # Legacy beats without attempt logs: count a matched word as one try.
+    if _said(beat):
+        return 1
+    return None
+
+
+def avg_attempts_from_beats(beats: list) -> float | None:
+    vals = [n for b in beats if b.get("type") == "targeted" and (n := _attempts_for(b)) is not None]
+    return round(sum(vals) / len(vals), 2) if vals else None
+
+
 def summarize(beats: list) -> dict:
     targeted = [b for b in beats if b["type"] == "targeted"]
     opened = [b for b in beats if b["type"] == "open"]
@@ -167,6 +184,7 @@ def summarize(beats: list) -> dict:
         "targeted_accuracy": round(sum(b["accuracy"] for b in targeted) / len(targeted), 2) if targeted else None,
         "targets_said": sum(1 for b in targeted if _said(b)),
         "targets_total": len(targeted),
+        "avg_attempts_per_word": avg_attempts_from_beats(beats),
         **{key: mean(key) for key in FEATURE_KEYS},
         "acoustic_beats": len(measured),
         "open_answered": len(answered),
