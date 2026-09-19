@@ -6,6 +6,9 @@
   <title>StoryBuddy</title>
   <meta name="description" content="StoryBuddy turns speech practice into storytime: a friendly narrator reads interactive stories and cheers kids on as they say their practice words out loud.">
   <link rel="stylesheet" href="/static/css/landing.css">
+  <link rel="stylesheet" href="/static/css/mascot.css?v=sprout1">
+  <link rel="preload" href="/static/vendor/rive/rive.wasm" as="fetch" type="application/wasm" crossorigin>
+  <link rel="preload" href="/static/mascot/sobo.riv?v=1" as="fetch" crossorigin>
 </head>
 <body>
   <header class="nav">
@@ -26,8 +29,8 @@
         <p class="eyebrow">Research-backed speech practice for kids</p>
         <h1>Speech practice that feels like storytime.</h1>
         <p class="lede">
-          Benny the Bunny reads a story out loud and pauses for your child to help tell it.
-          Each answer is a chance to practise a tricky sound, and Benny is there to cheer
+          Mr. Sprout reads a story out loud and pauses for your child to help tell it.
+          Each answer is a chance to practise a tricky sound, and Mr. Sprout is there to cheer
           them on.
         </p>
         <div class="hero-actions">
@@ -37,19 +40,19 @@
       </div>
       <div class="hero-art">
         <div class="hero-scene" aria-hidden="true"></div>
-        <div class="bubble"><span class="bubble-hi">Hi, I’m Benny the Bunny!</span> Let’s start this adventure together.</div>
-        <img class="hero-buddy" src="/static/img/buddy-bunny.png?v=14" alt="" width="510" height="718" aria-hidden="true">
+        <div class="bubble"><span class="bubble-hi">Hi, I’m Mr. Sprout!</span> Let’s start this adventure together.</div>
+        <div class="hero-buddy" id="hero-mascot"></div>
       </div>
     </section>
 
     <!-- HOW IT WORKS -->
     <section class="section" id="how">
       <h2>How a story works</h2>
-      <p class="section-lede">Each story is six short parts. Benny reads one, then it's your child's turn to talk.</p>
+      <p class="section-lede">Each story is six short parts. Mr. Sprout reads one, then it's your child's turn to talk.</p>
       <ol class="steps">
         <li class="step">
           <span class="step-num">1</span>
-          <h3>Benny reads</h3>
+          <h3>Mr. Sprout reads</h3>
           <p>A warm narrator voice reads each part of the story, with pictures and gentle sound effects.</p>
         </li>
         <li class="step">
@@ -59,13 +62,13 @@
         </li>
         <li class="step">
           <span class="step-num">3</span>
-          <h3>Benny cheers them on</h3>
+          <h3>Mr. Sprout cheers them on</h3>
           <p>Specific, kind feedback after every answer. A missed word gets up to three friendly tries, never a scolding.</p>
         </li>
       </ol>
       <p class="powered">
         Powered by <a href="https://elevenlabs.io/" target="_blank" rel="noopener">ElevenLabs</a>:
-        text-to-speech gives Benny his voice, speech-to-text lets him hear your child’s answers,
+        text-to-speech gives Mr. Sprout a voice, speech-to-text lets Mr. Sprout hear your child’s answers,
         and every sound effect in the stories is made with ElevenLabs too!
       </p>
     </section>
@@ -138,7 +141,7 @@
       <p class="section-lede">StoryBuddy is built on speech-therapy research, including research on apps for kids with autism.</p>
       <ul class="research-list">
         <li>
-          <strong>Speech games at home work.</strong> In a clinical trial, children aged 4–10 who played a speech game at home for four weeks spoke more accurately. The study also tracked voice measures, as Benny does.
+          <strong>Speech games at home work.</strong> In a clinical trial, children aged 4–10 who played a speech game at home for four weeks spoke more accurately. The study also tracked voice measures, as Mr. Sprout does.
           <a class="source" href="https://pmc.ncbi.nlm.nih.gov/articles/PMC10600646/" target="_blank" rel="noopener">Kim et al., 2023 · JMIR Serious Games</a>
         </li>
         <li>
@@ -180,10 +183,10 @@
 
     <!-- FINAL CTA -->
     <section class="cta">
-      <img src="/static/img/buddy-bunny.png?v=14" alt="" width="510" height="718" aria-hidden="true">
+      <div class="cta-mascot" id="cta-mascot"></div>
       <div>
         <h2>Ready for a story?</h2>
-        <p>Make an account in a few seconds, pick a story, and Benny will take it from there.</p>
+        <p>Make an account in a few seconds, pick a story, and Mr. Sprout will take it from there.</p>
         <a class="btn big" href="/app">Start a story <span aria-hidden="true">→</span></a>
       </div>
     </section>
@@ -193,5 +196,17 @@
     <span>StoryBuddy</span>
     <a href="/app">Open the app</a>
   </footer>
+
+  <script type="module">
+    import { mountMascot, preloadMascot } from "/static/js/mascot.js?v=8";
+    preloadMascot();
+    // Mr. Sprout waves hello as soon as the page loads, then settles; click him to wave again.
+    const hero = mountMascot(document.getElementById("hero-mascot"), { initial: "hello", then: "idle", label: "Mr. Sprout waving hello" });
+    const cta = mountMascot(document.getElementById("cta-mascot"), { initial: "idle", then: "idle", label: "Mr. Sprout" });
+    for (const [m, el] of [[hero, "hero-mascot"], [cta, "cta-mascot"]]) {
+      const host = document.getElementById(el);
+      host.addEventListener("click", () => { m.setMood("idle"); m.setMood("hello"); });
+    }
+  </script>
 </body>
 </html>

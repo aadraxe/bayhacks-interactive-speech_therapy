@@ -1,6 +1,6 @@
 # StoryBuddy
 
-Interactive speech-practice stories for kids. A painted landscape and a soft cartoon bunny narrator (**Buddy**) guide each story beat, listen to the child’s answer, and reply with warm feedback.
+Interactive speech-practice stories for kids. A painted landscape and an animated Rive mascot narrator (**Mr. Sprout**, a sprout-headed forest sprite) guide each story beat, listen to the child’s answer, and reply with warm feedback.
 
 > **Safety:** StoryBuddy supports speech-therapy **practice**. It does not diagnose any condition and does not replace a speech therapist.
 
@@ -10,7 +10,7 @@ Interactive speech-practice stories for kids. A painted landscape and a soft car
 
 1. **Child signs in** (username + password; signup also asks for a parent email).
 2. **Picks a story** (or “Surprise me!”) against a storybook landscape.
-3. **Buddy narrates** each beat (ElevenLabs TTS), then listens (mic + STT).
+3. **Mr. Sprout narrates** each beat (ElevenLabs TTS), then listens (mic + STT).
 4. **Targeted practice words** get up to 3 gentle tries; open questions count as engagement.
 5. **Session is saved** to `data/sessions.json` with accuracy, attempts, and acoustic features.
 6. **Therapist report** (home → *Therapist report*) asks Groq for a parent/therapist summary plus chart specs, then renders a calm practice dashboard.
@@ -49,9 +49,25 @@ Then open:
 
 ## Frontend
 
-The child-facing page (`static/index.html`) uses Buddy the fox as the story narrator:
+The landing page (`static/landing.html`) and child-facing page (`static/index.html`) share one narrator, **Mr. Sprout**, an animated [Rive](https://rive.app) mascot (`static/mascot/sobo.riv`, runtime vendored in `static/vendor/rive/`, wrapper in `static/js/mascot.js`, styles in `static/css/mascot.css`).
 
-- Animated expressions (talking, happy, sad, thinking, celebrate)
+Mr. Sprout reacts to what the app is doing:
+
+| Mood | Rive artboard | When |
+|------|---------------|------|
+| `hello` | `SOBO-Hello` | waves on landing, after login, at story start |
+| `talking` | `SOBO-Talk` | ElevenLabs narration / reaction audio plays (mouth follows the audio loudness via the `mouthOpen` view-model input) |
+| `listening` | `SOBO-Listen` | mic is open, waiting for the child |
+| `thinking` | `SOBO-Listen` + CSS thought bubble | Groq / story-generation / report requests are pending |
+| `happy` | `SOBO-Yes` | positive reaction |
+| `sad` | `SOBO-Idle` + CSS droop and tear | sad / frustrated reaction |
+| `celebrate` | `SOBO-Yes` + CSS sparkles | story finished |
+| `idle` | `SOBO-Idle` | otherwise |
+
+Try it in the browser console: `SoboMascot.setAll("sad")`. Each mascot host exposes `data-mood` / `data-artboard`.
+
+Other frontend features:
+
 - Colorful sky scene with drifting clouds
 - Mic answer or typed fallback (same session API as the lab)
 - Progress stars after each reply; confetti at the end
