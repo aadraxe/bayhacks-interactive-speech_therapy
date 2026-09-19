@@ -42,13 +42,18 @@ Equivalent:
 
 Then open:
 
-| Page | URL |
-|------|-----|
-| **Child app** (login, stories, report) | http://127.0.0.1:8000/ |
-| **Developer lab** | http://127.0.0.1:8000/lab |
-| **API docs** (Swagger) | http://127.0.0.1:8000/docs |
+- **Landing page:** http://127.0.0.1:8000/
+- **Child experience:** http://127.0.0.1:8000/app
+- **Developer lab:** http://127.0.0.1:8000/lab
+- **API docs:** http://127.0.0.1:8000/docs
 
-One uvicorn process serves **both** the API and the static frontend (`/`, `/static/...`, `/lab`).
+## Frontend
+
+- **Landing page:** `static/landing.html` at `/`
+- **Child app:** `static/index.html` at `/app` — Buddy the bunny narrator, story picker, mic practice, therapist report
+- Mic answer or typed fallback; progress stars; confetti at the end
+
+All story / scoring / TTS / STT logic stays on the FastAPI backend.
 
 ---
 
@@ -168,7 +173,7 @@ app/
   sessions.py      In-progress runs + SQL history
   report.py        Progress report + charts metadata
   …
-static/            Child UI + lab + images
+static/            Landing + child UI + lab + images
 stories/           Story JSON
 data/              SQLite file, optional legacy JSON, caches
 Dockerfile         Production image

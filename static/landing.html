@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>StoryBuddy</title>
+  <meta name="description" content="StoryBuddy turns speech practice into storytime: a friendly narrator reads interactive stories and cheers kids on as they say their practice words out loud.">
+  <link rel="stylesheet" href="/static/css/landing.css">
+</head>
+<body>
+  <header class="nav">
+    <a class="logo" href="/">StoryBuddy</a>
+    <nav class="nav-links" aria-label="Page sections">
+      <a href="#how">How it works</a>
+      <a href="#stories">Stories</a>
+      <a href="#grownups">For grown-ups</a>
+      <a href="#research">Research</a>
+    </nav>
+    <a class="btn small" href="/app">Start a story</a>
+  </header>
+
+  <main>
+    <!-- HERO -->
+    <section class="hero">
+      <div class="hero-copy">
+        <p class="eyebrow">Research-backed speech practice for kids</p>
+        <h1>Speech practice that feels like storytime.</h1>
+        <p class="lede">
+          Benny the Bunny reads a story out loud and pauses for your child to help tell it.
+          Each answer is a chance to practise a tricky sound, and Benny is there to cheer
+          them on.
+        </p>
+        <div class="hero-actions">
+          <a class="btn big" href="/app">Start a story <span aria-hidden="true">→</span></a>
+          <a class="btn ghost" href="#how">See how it works</a>
+        </div>
+      </div>
+      <div class="hero-art">
+        <div class="hero-scene" aria-hidden="true"></div>
+        <div class="bubble"><span class="bubble-hi">Hi, I’m Benny the Bunny!</span> Let’s start this adventure together.</div>
+        <img class="hero-buddy" src="/static/img/buddy-bunny.png?v=14" alt="" width="510" height="718" aria-hidden="true">
+      </div>
+    </section>
+
+    <!-- HOW IT WORKS -->
+    <section class="section" id="how">
+      <h2>How a story works</h2>
+      <p class="section-lede">Each story is six short parts. Benny reads one, then it's your child's turn to talk.</p>
+      <ol class="steps">
+        <li class="step">
+          <span class="step-num">1</span>
+          <h3>Benny reads</h3>
+          <p>A warm narrator voice reads each part of the story, with pictures and gentle sound effects.</p>
+        </li>
+        <li class="step">
+          <span class="step-num">2</span>
+          <h3>Your child answers</h3>
+          <p>They say the practice word out loud, or answer an open question in their own words.</p>
+        </li>
+        <li class="step">
+          <span class="step-num">3</span>
+          <h3>Benny cheers them on</h3>
+          <p>Specific, kind feedback after every answer. A missed word gets up to three friendly tries, never a scolding.</p>
+        </li>
+      </ol>
+      <p class="powered">
+        Powered by <a href="https://elevenlabs.io/" target="_blank" rel="noopener">ElevenLabs</a>:
+        text-to-speech gives Benny his voice, speech-to-text lets him hear your child’s answers,
+        and every sound effect in the stories is made with ElevenLabs too!
+      </p>
+    </section>
+
+    <!-- STORIES -->
+    <section class="section" id="stories">
+      <h2>Stories with a sound to practise</h2>
+      <p class="section-lede">Each story focuses on one sound and ends with a small life lesson.</p>
+      <div class="stories">
+        <article class="story-card">
+          <img src="/static/img/story-leo-tells-the-truth.png?v=7" alt="A tipped-over flowerpot with a yellow flower next to a red ball" loading="lazy">
+          <div class="story-body">
+            <span class="sound">L sound</span>
+            <h3>Leo Tells the Truth</h3>
+            <p class="words">yellow · ball · clean · flower</p>
+            <p class="moral">Telling the truth helps us fix problems together.</p>
+          </div>
+        </article>
+        <article class="story-card">
+          <img src="/static/img/story-rosie-shares.png?v=7" alt="A rabbit burrow under a tree beside a patch of carrots" loading="lazy">
+          <div class="story-body">
+            <span class="sound">R sound</span>
+            <h3>Rosie Shares a Carrot</h3>
+            <p class="words">carrot · red · share · rainbow</p>
+            <p class="moral">Sharing helps friends feel happy.</p>
+          </div>
+        </article>
+        <article class="story-card">
+          <img src="/static/img/story-sammy-swims.png?v=7" alt="A duckling swimming across a pond toward a small grassy island" loading="lazy">
+          <div class="story-body">
+            <span class="sound">S sound</span>
+            <h3>Sammy Swims to the Island</h3>
+            <p class="words">sun · swim · stone · smile</p>
+            <p class="moral">Being brave means trying, even when you feel a little scared.</p>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <!-- GROWN-UPS -->
+    <section class="section" id="grownups">
+      <h2>For parents and speech therapists</h2>
+      <p class="section-lede">Kids have fun. You see how practice is going.</p>
+      <div class="features">
+        <div class="feature">
+          <span class="feature-icon" aria-hidden="true">⭐</span>
+          <h3>Progress stars</h3>
+          <p>Every finished story earns stars, and a history of past sessions shows how practice is going over time.</p>
+        </div>
+        <div class="feature">
+          <span class="feature-icon" aria-hidden="true">📝</span>
+          <h3>Plain-language reports</h3>
+          <p>A practice summary with real numbers, like practice-word accuracy and what changed since the first session sent over to parent's email, ready to share with your therapist.</p>
+        </div>
+        <div class="feature">
+          <span class="feature-icon" aria-hidden="true">🎙️</span>
+          <h3>Voice insights</h3>
+          <p>Speaking pace, pauses and pitch variation are measured from each recording and shown as things to talk over with the therapist, not as a diagnosis.</p>
+        </div>
+      </div>
+      <p class="safety">
+        StoryBuddy supports speech-therapy practice. It does not diagnose any condition
+        and does not replace a speech therapist.
+      </p>
+    </section>
+
+    <!-- RESEARCH -->
+    <section class="section research" id="research">
+      <h2>Backed by research</h2>
+      <p class="section-lede">StoryBuddy is built on speech-therapy research, including research on apps for kids with autism.</p>
+      <ul class="research-list">
+        <li>
+          <strong>Speech games at home work.</strong> In a clinical trial, children aged 4–10 who played a speech game at home for four weeks spoke more accurately. The study also tracked voice measures, as Benny does.
+          <a class="source" href="https://pmc.ncbi.nlm.nih.gov/articles/PMC10600646/" target="_blank" rel="noopener">Kim et al., 2023 · JMIR Serious Games</a>
+        </li>
+        <li>
+          <strong>Designed with autistic kids in mind.</strong> A review of 43 studies of autism apps found that child-centred design and game-like play keep kids engaged.
+          <a class="source" href="https://pmc.ncbi.nlm.nih.gov/articles/PMC10384173/" target="_blank" rel="noopener">Liu et al., 2023 · Sensors</a>
+        </li>
+        <li>
+          <strong>Progress notes help practice stick.</strong> Speech therapists recommend short, positive progress notes to carry practice over at home. StoryBuddy’s stars and reports do just that.
+          <a class="source" href="https://speechtherapyfun.com/2026/05/speech-therapy-carryover-5-proven-strategies-for-home-practice.html" target="_blank" rel="noopener">Speech Therapy Fun blog, 2026</a>
+        </li>
+      </ul>
+    </section>
+
+    <!-- COMING SOON -->
+    <section class="section roadmap" id="next">
+      <h2>What’s coming next</h2>
+      <p class="section-lede">StoryBuddy is just getting started. Here’s what we’re building.</p>
+      <div class="roadmap-list">
+        <div class="roadmap-item">
+          <span class="soon">Coming soon</span>
+          <span class="feature-icon" aria-hidden="true">📚</span>
+          <h3>A big library of stories</h3>
+          <p>Many more stories for more speech sounds, so there’s always a new adventure to try.</p>
+        </div>
+        <div class="roadmap-item">
+          <span class="soon">Coming soon</span>
+          <span class="feature-icon" aria-hidden="true">🎬</span>
+          <h3>Animated video stories</h3>
+          <p>Stories come to life as animated, interactive videos that respond as your child talks.</p>
+        </div>
+        <div class="roadmap-item">
+          <span class="soon">Coming soon</span>
+          <span class="feature-icon" aria-hidden="true">🩺</span>
+          <h3>An app for therapists</h3>
+          <p>A separate app for speech therapists to see each child’s practice history and progress in one place.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- FINAL CTA -->
+    <section class="cta">
+      <img src="/static/img/buddy-bunny.png?v=14" alt="" width="510" height="718" aria-hidden="true">
+      <div>
+        <h2>Ready for a story?</h2>
+        <p>Make an account in a few seconds, pick a story, and Benny will take it from there.</p>
+        <a class="btn big" href="/app">Start a story <span aria-hidden="true">→</span></a>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <span>StoryBuddy</span>
+    <a href="/app">Open the app</a>
+  </footer>
+</body>
+</html>
