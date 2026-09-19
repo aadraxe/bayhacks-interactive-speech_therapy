@@ -1123,14 +1123,6 @@ body {
   box-shadow: 0 6px 16px var(--shadow);
 }
 
-.report-meta-line {
-  margin: 0;
-  text-align: center;
-  font-size: 0.82rem;
-  font-weight: 700;
-  color: rgba(47, 56, 46, 0.65);
-}
-
 @media (max-width: 720px) {
   .report-dash-top {
     grid-template-columns: 1fr;

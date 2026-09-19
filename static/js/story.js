@@ -957,13 +957,6 @@ function paintReport(payload) {
 
   renderReportStats(payload.input, payload);
   renderReportCharts(payload.charts, payload.input);
-  const source =
-    payload.source === "groq"
-      ? `Written by Groq${payload.model ? ` · ${payload.model}` : ""}`
-      : "Built-in template";
-  const note = payload.note ? ` · ${payload.note}` : "";
-  $("report-meta").textContent = `${source} · ${payload.sessions_used} session${payload.sessions_used === 1 ? "" : "s"}${note}`;
-  $("report-meta").hidden = false;
 }
 
 async function loadReport({ force = false } = {}) {
@@ -975,7 +968,6 @@ async function loadReport({ force = false } = {}) {
   $("report-stats").hidden = true;
   $("report-charts").hidden = true;
   $("report-closing").hidden = true;
-  $("report-meta").hidden = true;
   try {
     const res = await fetch("/api/report", { method: "POST" });
     if (!res.ok) throw new Error(await errorText(res));
