@@ -92,7 +92,31 @@ def test_template_uses_honest_practice_wording(seeded):
     assert not pace.startswith("- Improved") and "not better on its own" in pace
     assert "may suggest" in text
     assert "audio quality, word difficulty, or familiarity" in text
-    assert "sparse" in report.template_report(report.build_report_input(seeded[-1:]))
+    sparse = report.template_report(report.build_report_input(seeded[-1:]))
+    assert "sparse" in sparse and "Baseline readings" in sparse
+    assert "Improved" not in sparse and "Watch" not in sparse
+
+
+def test_default_charts_respect_sparse_threshold(seeded):
+    charts = report.default_charts(2)
+    assert all(c["chartable"] is False for c in charts if c["type"] == "line")
+    assert next(c for c in charts if c["metric"] == "open_engagement")["chartable"] is True
+    rich = report.default_charts(6)
+    assert all(c["chartable"] is True for c in rich)
+
+
+def test_extract_charts_strips_json_block():
+    body = (
+        "**For the parent:** Practice scores rose from 68% to 98%.\n\n**For the therapist:**\n"
+        "- Improved: practice-word accuracy went from 68% to 98%.\n"
+        "- Patterns may reflect audio quality, word difficulty, or familiarity with the story.\n\n"
+        "**Practice suggestion:** Practise share.\n\n" + report.CLOSING_LINE
+        + '\n\n"charts": [\n  {"metric": "practice_word_accuracy", "type": "line", "chartable": true}\n]\n'
+    )
+    text, charts = report._extract_charts(body)
+    assert charts and charts[0]["metric"] == "practice_word_accuracy"
+    assert '"charts"' not in text
+    assert report.CLOSING_LINE in text
 
 
 HONEST = (
@@ -127,15 +151,37 @@ def test_caveat_is_required(seeded):
 @pytest.mark.parametrize("phrase", ["(sparse data)", "(only one session, so it is too early to say)", "(limited data)"])
 def test_sparse_must_be_said_with_few_sessions(seeded, phrase):
     one = report.build_report_input(seeded[-1:])
-    single = HONEST.replace("- Improved: practice-word accuracy went from 68% to 98%.", "- Stable: practice-word accuracy was 68%.")
-    assert "sparse" in report._check(single, one)
-    assert report._check(single.replace("rose from", f"{phrase} rose from"), one) is None
+    base = (
+        "**For the parent:** Practice scores were a starting point.\n\n"
+        "**For the therapist:**\n"
+        "- Practice-word accuracy was 68%.\n"
+        "- Patterns may reflect audio quality, word difficulty, or familiarity with the story.\n\n"
+        "**Practice suggestion:** Practise share.\n\n" + report.CLOSING_LINE
+    )
+    assert "sparse" in report._check(base, one) or "trends need more" in report._check(base, one)
+    ok = base.replace(
+        "Practice scores were a starting point.",
+        f"Practice scores {phrase} were a starting point.",
+    )
+    assert report._check(ok, one) is None
 
 
-def test_improved_needs_more_than_one_session(seeded):
+def test_sparse_rejects_improved_or_watch(seeded):
+    one = report.build_report_input(seeded[-1:])
+    text = (
+        "**For the parent:** (sparse data) only one session so far.\n\n"
+        "**For the therapist:**\n- Improved: practice-word accuracy was 68%.\n"
+        "- Patterns may reflect audio quality, word difficulty, or familiarity with the story.\n\n"
+        "**Practice suggestion:** Practise share.\n\n" + report.CLOSING_LINE
+    )
+    assert "Improved/Watch" in report._check(text, one)
+
+
+def test_improved_forbidden_when_sparse_even_with_two_sessions(seeded):
+    two = report.build_report_input(seeded[-2:])
     text = HONEST.replace("rose from", "(sparse data) rose from")
-    assert "only one session" in report._check(text, report.build_report_input(seeded[-1:]))
-    assert report._check(text, report.build_report_input(seeded[-2:])) is None
+    assert "Improved/Watch" in report._check(text, two)
+    assert report._check(HONEST, report.build_report_input(seeded)) is None
 
 
 @pytest.mark.parametrize("cause", ["growing confidence", "less tired", "a better mood"])
@@ -147,8 +193,21 @@ def test_guessed_personal_causes_are_rejected(seeded, cause):
 def test_report_data_uses_practice_word_naming(seeded):
     data = json.dumps(report.build_report_input(seeded))
     assert "practice_word_accuracy" in data and "targeted_accuracy" not in data
+    assert "avg_attempts_per_word" in data
 
 
 def test_typed_sessions_are_left_out_of_the_report(seeded):
     typed = {**seeded[0], "mode": "typed", "seeded": False}
     assert typed not in sessions.for_report(seeded + [typed])
+
+
+def test_summary_includes_avg_attempts():
+    beats = [
+        {"type": "targeted", "target": "kite", "accuracy": 1.0, "match": "exact",
+         "attempts_taken": 1, "final_result": "match",
+         "features": {"mean_pitch": 250.0, "pitch_variation": 2.0, "speaking_rate": 2.5, "pause_count": 1}},
+        {"type": "targeted", "target": "brave", "accuracy": 0.5, "match": "missed",
+         "attempts_taken": 3, "final_result": "not_yet", "features": None},
+    ]
+    s = sessions.summarize(beats)
+    assert s["avg_attempts_per_word"] == 2.0

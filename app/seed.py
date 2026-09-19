@@ -36,6 +36,7 @@ OPEN_ANSWERS_BY_SESSION = [
 PITCH_VARIATION = [1.6, 1.8, 2.1, 2.4, 2.7, 3.0]  # semitones, rising = more expressive
 SPEAKING_RATE = [2.2, 2.3, 2.5, 2.6, 2.8, 2.9]    # syllables per second
 PAUSES = [3, 3, 2, 2, 1, 1]                      # per targeted answer, on average
+ATTEMPTS_BY_OUTCOME = {"exact": 1, "close": 2, "missed": 3, "quiet": 3}
 
 
 def heard_for(word: str, outcome: str) -> str:
@@ -59,11 +60,15 @@ def seed_demo_sessions(story: dict, weeks: int = 6) -> list:
         beats = []
         for index, beat in enumerate(story["beats"]):
             if beat["type"] == "targeted":
-                said = heard_for(beat["target_response"], next(outcomes))
+                outcome = next(outcomes)
+                said = heard_for(beat["target_response"], outcome)
                 score = scoring.score_response(said, beat["target_response"])
+                attempts_taken = ATTEMPTS_BY_OUTCOME[outcome]
                 beats.append({
                     "index": index, "type": "targeted", "target": beat["target_response"],
                     "heard": said, "input": "voice", "accuracy": score["accuracy"], "match": score["match"],
+                    "attempts_taken": attempts_taken,
+                    "final_result": "match" if score["match"] in ("exact", "close") else "not_yet",
                     "features": None if not said else {
                         "mean_pitch": round(262 + rng.uniform(-12, 12), 1),
                         "pitch_variation": round(PITCH_VARIATION[k] + rng.uniform(-0.25, 0.25), 2),
