@@ -3,7 +3,6 @@
 import json
 import os
 import tempfile
-from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI, File, Form, Header, HTTPException, UploadFile
@@ -12,7 +11,7 @@ from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from app import acoustics, companion, config, db, report, scoring, sessions, settings, stories, users, voice
+from app import acoustics, companion, config, report, scoring, sessions, settings, stories, users, voice
 from app.seed import seed_demo_sessions
 
 MAX_UPLOAD_BYTES = 20 * 1024 * 1024
@@ -28,13 +27,6 @@ TAGS = [
     {"name": "Tools", "description": "Health check and developer tools (acoustic analysis, samples)."},
 ]
 
-
-@asynccontextmanager
-async def lifespan(_app: FastAPI):
-    db.init_db()
-    yield
-
-
 app = FastAPI(
     title="StoryBuddy API",
     description=(
@@ -43,7 +35,6 @@ app = FastAPI(
     ),
     version="0.1.0",
     openapi_tags=TAGS,
-    lifespan=lifespan,
 )
 
 # Lets a separately served frontend (e.g. a Vite/React dev server) call the API.
@@ -101,8 +92,10 @@ def health():
         "tts_model": config.ELEVENLABS_TTS_MODEL,
         "stt_model": config.ELEVENLABS_STT_MODEL,
         "llm_model": config.GROQ_MODEL,
-        "storage": db.storage_info(),
-        "stories": len(stories.load_all()),
+        "storage": {
+            "stories": len(stories.load_all()),
+            "sessions.json": _json_file_status(config.SESSIONS_FILE),
+        },
     }
 
 
@@ -258,13 +251,11 @@ def _story_card(story: dict) -> dict:
 
 
 @app.get("/api/stories", tags=["Stories"], summary="List the pre-written stories")
-def list_stories(authorization: str | None = Header(default=None)):
+def list_stories():
     """All stories in stories/, plus which one the rotation would pick next."""
-    user = users.user_from_token(_bearer(authorization))
-    username = user["username"] if user else None
     return {
         "stories": [_story_card(s) for s in stories.load_all()],
-        "next_in_rotation": stories.next_in_rotation(sessions.load_all(username))["id"],
+        "next_in_rotation": stories.next_in_rotation(sessions.load_all())["id"],
     }
 
 
@@ -281,18 +272,16 @@ class StartSession(BaseModel):
 
 
 @app.post("/api/session/start", tags=["Story session"], summary="Start a story session")
-def start_session(body: StartSession | None = None, authorization: str | None = Header(default=None)):
+def start_session(body: StartSession | None = None):
     """Begin a story run with `story_id`, or omit it to rotate to the least recently used story."""
-    user = users.user_from_token(_bearer(authorization))
-    username = user["username"] if user else None
     try:
         if body and body.story_id:
             story = stories.get(body.story_id)
         else:
-            story = stories.next_in_rotation(sessions.load_all(username))
+            story = stories.next_in_rotation(sessions.load_all())
     except stories.StoryError as exc:
         raise HTTPException(status_code=404, detail=str(exc))
-    session = sessions.start(story, username=username)
+    session = sessions.start(story)
     return {"session_id": session["session_id"], "story": _with_cue_urls(story), "beat_index": 0}
 
 
@@ -413,13 +402,11 @@ def respond(
 
 
 @app.get("/api/sessions", tags=["Progress"], summary="List saved sessions (for the progress chart)")
-def list_sessions(authorization: str | None = Header(default=None)):
-    """Saved sessions, oldest first (summaries only; beat detail stays in the database)."""
-    user = users.user_from_token(_bearer(authorization))
-    username = user["username"] if user else None
+def list_sessions():
+    """Saved sessions, oldest first (summaries only; beats are in sessions.json)."""
     return [
         {k: s[k] for k in ("session_id", "date", "story_id", "mode", "seeded", "summary")}
-        for s in sessions.load_all(username)
+        for s in sessions.load_all()
     ]
 
 
@@ -437,11 +424,9 @@ def remove_seeded_sessions():
 
 
 @app.post("/api/report", tags=["Progress"], summary="Generate the progress report")
-def progress_report(authorization: str | None = Header(default=None)):
+def progress_report():
     """Parent/therapist progress report from spoken sessions (typed test sessions excluded)."""
-    user = users.user_from_token(_bearer(authorization))
-    username = user["username"] if user else None
-    usable = sessions.for_report(sessions.load_all(username))
+    usable = sessions.for_report(sessions.load_all())
     result = report.generate_report(usable)
     if result["report"] is None:
         raise HTTPException(status_code=409, detail="No spoken sessions yet. Finish a story out loud, or add demo sessions.")

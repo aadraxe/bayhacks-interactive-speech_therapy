@@ -1,24 +1,29 @@
-"""Practice sessions: in-progress story runs, and saved history in SQL.
+"""Practice sessions: the in-progress story run, and the saved history in sessions.json.
 
 A saved session looks like:
 {
   "session_id": "20260919-014012-ab12", "date": "2026-09-19T01:40:12",
   "story_id": "pip-and-the-kite", "mode": "voice" | "typed" | "mixed", "seeded": false,
-  "username": "kid1",   # optional; set when the child is logged in
-  "beats": [...],
+  "beats": [
+    {"index": 0, "type": "targeted", "target": "kite", "heard": "kite", "input": "voice",
+     "accuracy": 1.0, "match": "exact",
+     "features": {"mean_pitch", "pitch_variation", "speaking_rate", "pause_count", "reliable"}},
+    {"index": 1, "type": "open", "heard": "...", "input": "voice",
+     "responded": true, "word_count": 7, "duration_s": 2.1}
+  ],
   "summary": {see summarize()}
 }
 Typed answers are for testing without a mic: those sessions are saved but kept out of
 the progress report, because they have no acoustics and aren't real speech.
 """
 
-from __future__ import annotations
-
+import json
+import os
 import secrets
 import threading
 from datetime import datetime
 
-from app import db
+from app import config
 
 FEATURE_KEYS = ("mean_pitch", "pitch_variation", "speaking_rate", "pause_count")
 
@@ -28,7 +33,7 @@ _active: dict = {}  # session_id -> in-progress session
 
 # --- In-progress sessions ------------------------------------------------------
 
-def start(story: dict, username: str | None = None) -> dict:
+def start(story: dict) -> dict:
     now = datetime.now()
     session = {
         "session_id": f"{now:%Y%m%d-%H%M%S}-{secrets.token_hex(2)}",
@@ -36,7 +41,6 @@ def start(story: dict, username: str | None = None) -> dict:
         "story_id": story["id"],
         "story": story,
         "beats": [],
-        "username": username,
     }
     with _lock:
         _active[session["session_id"]] = session
@@ -83,7 +87,7 @@ def targeted_record(index: int, target: str, attempts: list) -> dict:
 
 
 def finish(session_id: str) -> dict:
-    """Close an in-progress session and append it to SQL storage."""
+    """Close an in-progress session and append it to sessions.json."""
     with _lock:
         session = _active.pop(session_id)
     inputs = {b["input"] for b in session["beats"]}
@@ -96,36 +100,48 @@ def finish(session_id: str) -> dict:
         "beats": session["beats"],
         "summary": summarize(session["beats"]),
     }
-    if session.get("username"):
-        saved["username"] = session["username"]
     append(saved)
     return saved
 
 
 # --- Saved history -------------------------------------------------------------
 
-def load_all(username: str | None = None) -> list:
-    return db.sessions_load_all(username=username)
+def load_all() -> list:
+    if not config.SESSIONS_FILE.exists():
+        return []
+    try:
+        data = json.loads(config.SESSIONS_FILE.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return []
+    return sorted(data, key=lambda s: s["date"]) if isinstance(data, list) else []
 
 
-def save_all(session_rows: list) -> None:
-    db.sessions_save_all(session_rows)
+def save_all(sessions: list) -> None:
+    """Atomic write, so a crash mid-save can't corrupt the history."""
+    tmp = config.SESSIONS_FILE.with_suffix(".json.tmp")
+    tmp.write_text(json.dumps(sessions, indent=2), encoding="utf-8")
+    os.replace(tmp, config.SESSIONS_FILE)
 
 
 def append(session: dict) -> None:
     with _lock:
-        db.sessions_append(session)
+        sessions = load_all()
+        sessions.append(session)
+        save_all(sessions)
 
 
 def replace_seeded(seeded: list) -> list:
     """Swap out any earlier demo sessions for `seeded`; real sessions are kept."""
     with _lock:
-        return db.sessions_replace_seeded(seeded)
+        sessions = [s for s in load_all() if not s.get("seeded")] + seeded
+        sessions.sort(key=lambda s: s["date"])
+        save_all(sessions)
+    return sessions
 
 
-def for_report(session_rows: list) -> list:
+def for_report(sessions: list) -> list:
     """Sessions that count as progress: spoken sessions (demo ones included)."""
-    return [s for s in session_rows if s.get("mode") == "voice"]
+    return [s for s in sessions if s.get("mode") == "voice"]
 
 
 # --- Summaries -----------------------------------------------------------------

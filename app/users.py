@@ -1,19 +1,23 @@
-"""Accounts: username + password (+ parent email on signup).
+"""Simple local accounts: username + password stored in data/users.json.
 
-Stored in SQL (see app.db). Passwords are salted PBKDF2 hashes. Login returns a
-bearer token kept in the browser until logout/expiry.
+Signup also stores a parent email. Passwords are salted PBKDF2 hashes (stdlib
+only). Login returns a bearer token kept in the browser; tokens are listed on
+the user record until logout/expiry.
 """
 
 from __future__ import annotations
 
 import hashlib
+import json
 import re
 import secrets
 import threading
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 
-from app import db
+from app import config
 
+USERS_FILE = config.DATA_DIR / "users.json"
 TOKEN_DAYS = 30
 PBKDF2_ROUNDS = 120_000
 USERNAME_RE = re.compile(r"^[a-zA-Z0-9_]{3,24}$")
@@ -24,6 +28,22 @@ _lock = threading.Lock()
 
 def _now() -> datetime:
     return datetime.now(timezone.utc)
+
+
+def _load() -> dict:
+    if not USERS_FILE.exists():
+        return {"users": {}}
+    try:
+        return json.loads(USERS_FILE.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {"users": {}}
+
+
+def _save(data: dict) -> None:
+    USERS_FILE.parent.mkdir(parents=True, exist_ok=True)
+    tmp = USERS_FILE.with_suffix(".tmp")
+    tmp.write_text(json.dumps(data, indent=2), encoding="utf-8")
+    tmp.replace(USERS_FILE)
 
 
 def _hash_password(password: str, salt: bytes | None = None) -> tuple[str, str]:
@@ -77,38 +97,41 @@ def signup(username: str, password: str, parent_email: str = "") -> dict:
         raise ValueError(err)
 
     with _lock:
+        data = _load()
+        key = username.lower()
+        if key in data["users"]:
+            raise ValueError("That username is already taken. Try logging in.")
         salt, pw_hash = _hash_password(password)
         token = secrets.token_urlsafe(32)
         expires = (_now() + timedelta(days=TOKEN_DAYS)).isoformat()
-        try:
-            db.user_create({
-                "username": username,
-                "parent_email": parent_email.lower(),
-                "salt": salt,
-                "password_hash": pw_hash,
-                "created": _now().isoformat(),
-                "tokens": {token: expires},
-            })
-        except ValueError:
-            raise
+        data["users"][key] = {
+            "username": username,
+            "parent_email": parent_email.lower(),
+            "salt": salt,
+            "password_hash": pw_hash,
+            "created": _now().isoformat(),
+            "tokens": {token: expires},
+        }
+        _save(data)
     return {"username": username, "token": token}
 
 
 def login(username: str, password: str) -> dict:
     username = (username or "").strip()
     with _lock:
-        user = db.user_get(username.lower())
+        data = _load()
+        user = data["users"].get(username.lower())
         if not user or not _verify(password, user["salt"], user["password_hash"]):
             raise ValueError("Wrong username or password.")
         token = secrets.token_urlsafe(32)
         expires = (_now() + timedelta(days=TOKEN_DAYS)).isoformat()
-        tokens = dict(user.get("tokens") or {})
-        tokens[token] = expires
-        tokens = {
-            t: exp for t, exp in tokens.items()
+        user.setdefault("tokens", {})[token] = expires
+        # Drop expired tokens
+        user["tokens"] = {
+            t: exp for t, exp in user["tokens"].items()
             if datetime.fromisoformat(exp) > _now()
         }
-        db.user_save_tokens(username.lower(), tokens)
+        _save(data)
         return {"username": user["username"], "token": token}
 
 
@@ -116,11 +139,32 @@ def logout(token: str | None) -> None:
     if not token:
         return
     with _lock:
-        db.user_remove_token(token)
+        data = _load()
+        for user in data["users"].values():
+            if token in user.get("tokens", {}):
+                del user["tokens"][token]
+                _save(data)
+                return
 
 
 def user_from_token(token: str | None) -> dict | None:
     if not token:
         return None
     with _lock:
-        return db.user_find_by_token(token)
+        data = _load()
+        changed = False
+        found = None
+        for user in data["users"].values():
+            tokens = user.get("tokens", {})
+            exp = tokens.get(token)
+            if not exp:
+                continue
+            if datetime.fromisoformat(exp) <= _now():
+                del tokens[token]
+                changed = True
+                break
+            found = {"username": user["username"]}
+            break
+        if changed:
+            _save(data)
+        return found

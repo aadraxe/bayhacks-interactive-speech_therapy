@@ -12,7 +12,7 @@ Interactive speech-practice stories for kids. A painted landscape and a soft car
 2. **Picks a story** (or “Surprise me!”) against a storybook landscape.
 3. **Buddy narrates** each beat (ElevenLabs TTS), then listens (mic + STT).
 4. **Targeted practice words** get up to 3 gentle tries; open questions count as engagement.
-5. **Session is saved in SQL** (SQLite locally, Postgres when `DATABASE_URL` is set) with accuracy, attempts, and acoustic features.
+5. **Session is saved** to `data/sessions.json` with accuracy, attempts, and acoustic features.
 6. **Therapist report** (home → *Therapist report*) asks Groq for a parent/therapist summary plus chart specs, then renders a calm practice dashboard.
 
 There is also a **developer lab** for trying each pipeline piece in isolation.
@@ -65,58 +65,6 @@ Copy `.env.example` → `.env` (never commit `.env`):
 | `GROQ_MODEL` | Default `openai/gpt-oss-120b` |
 | `SOUND_VOLUME` | Reaction-sound volume `0.0`–`1.0` |
 | `CORS_ORIGINS` | Extra browser origins if a separate frontend calls the API |
-| `DATABASE_URL` | Optional. Default: SQLite at `data/storybuddy.db`. For deploy: your Postgres URL |
-
----
-
-## Data storage (needed for deploy)
-
-Accounts and practice/report history are stored in **SQL**:
-
-| Table | Contents |
-|-------|----------|
-| `users` | Username, parent email, password hash, auth tokens |
-| `sessions` | Finished story runs (beats + summary) for *My stars* and the therapist report |
-
-- **Local:** SQLite file `data/storybuddy.db` (created on first launch).
-- **Production:** set `DATABASE_URL` to Postgres (Railway, Render, Neon, Supabase, Fly, etc.).
-- First boot with an empty DB **imports** legacy `data/users.json` / `data/sessions.json` once if they exist.
-- Logged-in sessions are tagged with the child’s username; progress/report use that child’s history plus shared seeded demo sessions.
-
----
-
-## Deploy
-
-### What you need
-
-1. A host that runs Docker or a Python web process (Railway, Render, Fly.io, …).
-2. A **Postgres** database → put its URL in `DATABASE_URL`.
-3. Env vars: `ELEVENLABS_API_KEY`, `GROQ_API_KEY`, `DATABASE_URL` (plus optional settings from `.env.example`).
-4. An **HTTPS** public URL (browser mic APIs need a secure context on real devices).
-
-### Docker Compose (app + Postgres locally)
-
-```powershell
-# Put API keys in .env first
-docker compose up --build
-```
-
-Open http://127.0.0.1:8000/
-
-### Docker image (attach your own Postgres)
-
-```powershell
-docker build -t storybuddy .
-docker run --rm -p 8000:8000 --env-file .env `
-  -e DATABASE_URL=postgresql://USER:PASS@HOST:5432/DBNAME storybuddy
-```
-
-### Railway / Render (typical)
-
-1. Add a **Postgres** plugin; copy `DATABASE_URL`.
-2. Deploy this repo (Dockerfile included).
-3. Set `ELEVENLABS_API_KEY`, `GROQ_API_KEY`, `DATABASE_URL`. Hosts usually inject `PORT`.
-4. Health check: `GET /health` (`storage.backend` should be `postgres`).
 
 ---
 
@@ -124,36 +72,42 @@ docker run --rm -p 8000:8000 --env-file .env `
 
 Served from `static/index.html` + `static/css/story.css` + `static/js/story.js`.
 
-- **Login / signup** — login: username + password; signup also requires **parent’s email** (SQL `users` table).
-- **Home** — painted landscape, bunny, story cards, *Surprise me!*, *My stars*, *Therapist report*, *Log out*.
+- **Login / signup** — login: username + password; signup also requires **parent’s email**. Accounts live in `data/users.json` (PBKDF2 password hashes + bearer tokens).
+- **Home** — painted tree landscape, transparent bunny, story cards (Rosie / Leo / Sammy art), *Surprise me!*, *My stars*, *Therapist report*, *Log out*.
 - **Story loop** — auto mic after narration; retry loop on practice words; soft reaction sounds + spoken companion line.
 - **My stars** — recent finished sessions and practice-word accuracy.
-- **Therapist report** — `POST /api/report`: parent / therapist / practice suggestion panels, stats, and trend charts from the report `charts` list (line charts when ≥3 spoken sessions; otherwise a calm placeholder). Open engagement is a bar/stat.
+- **Therapist report** — calls `POST /api/report`, shows parent / therapist / practice suggestion panels, session stats, and **practice trend charts** driven by the report’s `charts` list (line charts only when there are 3+ spoken sessions; otherwise a calm “trends appear after a few more sessions” placeholder). Open-question engagement is a simple bar/stat.
 
-Art assets: `static/img/` (`buddy-bunny.png`, `story-home.png`, per-story art).
+Art assets live under `static/img/` (e.g. `buddy-bunny.png`, `story-home.png`, per-story landscapes).
 
 ---
 
 ## Practice session & scoring
 
-- **Stories** are JSON under `stories/` (typically 6 beats: ~4 targeted words + 2 open questions).
-- **Start:** `POST /api/session/start` (send `Authorization: Bearer …` when logged in).
+- **Stories** are JSON under `stories/` (typically 6 beats: ~4 targeted words + 2 open questions, moral, sound cues).
+- **Start:** `POST /api/session/start` with optional `story_id`.
 - **Answer:** `POST /api/session/{id}/respond` with WAV `audio` (or `text` for typed testing).
-- **Targeted beats:** STT + lenient match → match / retry / move on after 3 tries.
-- **Open beats:** participation only (not accuracy).
-- **Acoustics** (Praat): mean pitch, pitch variation, speaking rate, pause count.
-- Finished runs are stored in the **`sessions`** SQL table.
+- **Targeted beats:** STT with the target as a keyterm → lenient match → match / retry / move on after `MAX_ATTEMPTS` (3).
+- **Open beats:** participation only (answered + word count), not accuracy.
+- **Acoustics** (Praat / parselmouth): mean pitch, pitch variation, speaking rate, pause count on successful practice-word audio.
+- When the story finishes, the run is appended to **`data/sessions.json`**.
 
-Typed / mixed sessions are saved but **excluded from the progress report**. Only `mode: "voice"` counts.
+Typed / mixed sessions are saved but **excluded from the progress report** (no reliable voice measures). Only `mode: "voice"` sessions count.
 
 ---
 
 ## Therapist report
 
-- **Endpoint:** `POST /api/report` (scoped to the logged-in child when a token is sent).
-- Compact time series → Groq (or template fallback) with parent / therapist / practice suggestion + `charts` JSON.
-- Guardrails block clinical / banned wording.
-- Demo history: `POST /api/sessions/seed` / `DELETE /api/sessions/seed`.
+- **Endpoint:** `POST /api/report`
+- Builds a compact time series from spoken sessions (accuracy, avg attempts per word, acoustics, open engagement).
+- Groq writes a practice-tracking summary (not a clinical assessment) with sections:
+  - **For the parent**
+  - **For the therapist** (Improved / Stable / Watch when ≥3 sessions; **baseline** wording when fewer)
+  - **Practice suggestion**
+  - Closing disclaimer
+  - A **`charts`** JSON list the frontend uses for plotting
+- Guardrails reject banned clinical wording; if Groq fails checks, a **template** report is used instead.
+- Optional **demo history:** `POST /api/sessions/seed` (six weeks of labelled demo sessions) / `DELETE /api/sessions/seed`.
 
 ---
 
@@ -161,18 +115,24 @@ Typed / mixed sessions are saved but **excluded from the progress report**. Only
 
 ```
 app/
-  main.py          FastAPI routes + startup DB init
-  config.py        Env + paths + DATABASE_URL
-  db.py            SQLAlchemy models (users, sessions)
+  main.py          FastAPI routes
+  config.py        Env + paths
   users.py         Signup / login / tokens
-  sessions.py      In-progress runs + SQL history
+  stories.py       Load stories + rotation
+  sessions.py      In-progress + sessions.json
+  scoring.py       Practice-word match / accuracy
+  voice.py         ElevenLabs TTS + STT
+  acoustics.py     Pitch, rate, pauses
+  companion.py     Warm reaction lines (Groq)
   report.py        Progress report + charts metadata
+  seed.py          Demo sessions for demos / charts
   …
 static/            Child UI + lab + images
-stories/           Story JSON
-data/              SQLite file, optional legacy JSON, caches
-Dockerfile         Production image
-docker-compose.yml App + Postgres for local/prod-like runs
+stories/           Story JSON files
+data/              users.json, sessions.json, settings, …
+sounds/            Soft reaction cues
+samples/           Dev audio samples
+scripts/           Helpers (e.g. generate sounds)
 tests/             Offline unit tests
 run.py             uvicorn launcher
 ```
@@ -190,7 +150,7 @@ run.py             uvicorn launcher
 | Narrator | `POST /api/speak`, `GET /api/voices`, `POST /api/settings/voice` |
 | Tools | `GET /health`, `POST /api/features`, lab at `/lab` |
 
-Full docs: http://127.0.0.1:8000/docs
+Full interactive docs: http://127.0.0.1:8000/docs
 
 ---
 
@@ -201,11 +161,13 @@ Full docs: http://127.0.0.1:8000/docs
 .\.venv\Scripts\python -m pytest tests -q
 ```
 
+Tests cover scoring/retry behaviour, session summaries, demo seeding, and report guardrails (no live Groq calls required for those checks).
+
 ---
 
 ## Notes for demos
 
-- Finish a **voice** story (or seed demo sessions) before generating the therapist report.
-- Trend charts need **at least 3** spoken sessions; fewer show placeholders.
-- Hard-refresh (Ctrl+F5) after pulls so CSS/JS/images aren’t cached.
-- Keep secrets in `.env` only. Prefer Postgres + `DATABASE_URL` for any shared deploy.
+- Use a **voice** story finish (or seed demo sessions) before generating the therapist report.
+- Charts that need a trend stay in placeholder mode until there are **at least 3** spoken sessions.
+- Hard-refresh the browser (Ctrl+F5) after pulling frontend changes so CSS/JS/images aren’t stuck in cache.
+- Keep API keys only in `.env`; `data/users.json` and `data/sessions.json` are local runtime data.
