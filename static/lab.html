@@ -1,0 +1,995 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>StoryBuddy Lab</title>
+<style>
+  :root {
+    --bg:#f7f5f1; --card:#fff; --ink:#23232b; --muted:#6a6a75; --line:#e7e2d9;
+    --accent:#d9632f; --blue:#2f6fd9; --green:#2e8b57; --warn:#b7791f; --red:#c43d3d;
+    --pause:rgba(217,99,47,.14); --mono: ui-monospace, "Cascadia Code", Consolas, monospace;
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; padding:24px 16px 64px; }
+  main { max-width:960px; margin:0 auto; }
+  header { display:flex; flex-wrap:wrap; align-items:baseline; gap:8px 16px; }
+  h1 { font-size:1.5rem; margin:0; }
+  .tag { font-size:.8rem; color:var(--muted); border:1px solid var(--line); border-radius:999px; padding:2px 10px; }
+  .banner { background:#fff6e8; border:1px solid #f1dcb5; border-radius:10px; padding:10px 14px; margin:14px 0 18px; font-size:.92rem; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:18px 20px; margin-bottom:18px; }
+  .card h2 { font-size:1.1rem; margin:0 0 2px; display:flex; align-items:center; gap:10px; }
+  .step { font-size:.75rem; font-weight:700; color:#fff; background:var(--ink); border-radius:6px; padding:1px 7px; }
+  .hint { color:var(--muted); margin:0 0 14px; font-size:.92rem; }
+  .status-row { display:flex; flex-wrap:wrap; gap:8px; }
+  .pill { display:inline-flex; align-items:center; gap:6px; font-size:.85rem; border:1px solid var(--line); border-radius:999px; padding:3px 12px; background:#fcfbf9; }
+  .dot { width:8px; height:8px; border-radius:50%; background:var(--muted); }
+  .dot.ok { background:var(--green); } .dot.bad { background:var(--red); } .dot.idle { background:#c9c3b8; }
+  .tabs { display:flex; gap:6px; border-bottom:1px solid var(--line); margin-bottom:14px; flex-wrap:wrap; }
+  .tabs button { background:none; color:var(--muted); border:0; border-bottom:2px solid transparent; border-radius:0; padding:8px 12px; font-weight:600; }
+  .tabs button.active { color:var(--ink); border-bottom-color:var(--accent); }
+  button { font:inherit; font-weight:600; border:0; border-radius:999px; padding:8px 18px; cursor:pointer; color:#fff; background:var(--accent); }
+  button.ghost { background:#fff; color:var(--ink); border:1px solid var(--line); }
+  button.rec { background:var(--red); }
+  button:disabled { opacity:.5; cursor:default; }
+  .samples { display:grid; gap:8px; }
+  .sample { display:flex; flex-wrap:wrap; align-items:center; gap:10px; border:1px solid var(--line); border-radius:10px; padding:8px 12px; }
+  .sample .name { font-family:var(--mono); font-size:.88rem; flex:1 1 200px; }
+  .sample audio { height:32px; flex:1 1 240px; max-width:100%; }
+  .row { display:flex; flex-wrap:wrap; gap:10px; align-items:center; }
+  .msg { min-height:1.4em; margin-top:10px; font-size:.9rem; color:var(--muted); }
+  .msg.error { color:var(--red); }
+  .results { margin-top:16px; }
+  .source { font-size:.88rem; color:var(--muted); margin-bottom:10px; }
+  .metrics { display:grid; grid-template-columns:repeat(auto-fit, minmax(170px, 1fr)); gap:10px; }
+  .metric { border:1px solid var(--line); border-radius:12px; padding:12px 14px; }
+  .metric .label { font-size:.8rem; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; }
+  .metric .value { font-size:1.6rem; font-weight:700; line-height:1.2; margin:2px 0; font-variant-numeric:tabular-nums; }
+  .metric .value small { font-size:.85rem; font-weight:500; color:var(--muted); }
+  .metric .what { font-size:.82rem; color:var(--muted); }
+  .extras { display:flex; flex-wrap:wrap; gap:6px 16px; font-size:.85rem; color:var(--muted); margin-top:10px; }
+  .extras b { color:var(--ink); font-weight:600; }
+  .notes { margin-top:10px; padding:8px 12px; border-radius:8px; background:#fff6e8; color:#7a5212; font-size:.88rem; }
+  .reliable { font-size:.8rem; font-weight:700; border-radius:6px; padding:1px 8px; }
+  .reliable.yes { background:#e3f3ea; color:var(--green); } .reliable.no { background:#fbeede; color:var(--warn); }
+  .chart-wrap { margin-top:14px; overflow-x:auto; border:1px solid var(--line); border-radius:10px; padding:8px; }
+  svg text { font:11px system-ui, sans-serif; fill:var(--muted); }
+  .legend { display:flex; flex-wrap:wrap; gap:14px; font-size:.8rem; color:var(--muted); margin-top:6px; }
+  .legend i { display:inline-block; width:12px; height:10px; margin-right:5px; vertical-align:-1px; border-radius:2px; }
+  details { margin-top:12px; }
+  summary { cursor:pointer; color:var(--muted); font-size:.88rem; }
+  pre { font-family:var(--mono); font-size:.8rem; background:#faf8f4; border:1px solid var(--line); border-radius:8px; padding:10px; overflow-x:auto; max-height:320px; }
+  .roadmap { list-style:none; margin:0; padding:0; display:grid; gap:6px; }
+  .roadmap li { display:flex; gap:10px; align-items:baseline; color:var(--muted); font-size:.92rem; }
+  .roadmap .step { background:#c9c3b8; }
+  .roadmap li.done { color:var(--ink); } .roadmap li.done .step { background:var(--green); }
+  .roadmap li.preview { color:var(--ink); } .roadmap li.preview .step { background:var(--blue); }
+  .roadmap em { font-style:normal; font-size:.8rem; color:var(--blue); }
+
+  /* Story conversation */
+  .toggle { display:inline-flex; align-items:center; gap:6px; font-size:.9rem; color:var(--muted); cursor:pointer; }
+  .convo { display:flex; flex-direction:column; gap:10px; margin-top:16px; max-height:560px; overflow-y:auto; padding:4px 2px; }
+  .bubble { max-width:85%; border-radius:14px; padding:10px 14px; }
+  .bubble.buddy { align-self:flex-start; background:#fbf3ea; border:1px solid #f0dfcb; border-top-left-radius:4px; }
+  .bubble.child { align-self:flex-end; background:#eaf1fc; border:1px solid #d3e1f7; border-top-right-radius:4px; }
+  .bubble.react { background:#f1f7ef; border-color:#d6e8d0; }
+  .bubble .who { font-size:.75rem; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; margin-bottom:2px; display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+  .bubble .prompt { font-weight:700; margin-top:6px; }
+  .bubble .heard { font-size:1.05rem; }
+  .bubble .heard.silent { color:var(--muted); font-style:italic; }
+  .chips { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
+  .chip { font-size:.78rem; font-weight:600; border-radius:999px; padding:2px 10px; background:#fff; border:1px solid var(--line); }
+  .chip.good { background:#e3f3ea; border-color:#c3e3cf; color:var(--green); }
+  .chip.mid { background:#fdf3e1; border-color:#f0dcb3; color:var(--warn); }
+  .chip.low { background:#fbe9e9; border-color:#f0cccc; color:var(--red); }
+  .chip.info { color:var(--blue); }
+  .replay { background:none; color:var(--muted); border:1px solid var(--line); padding:0 8px; font-size:.72rem; border-radius:999px; }
+  .mini-metrics { display:grid; grid-template-columns:repeat(auto-fit, minmax(110px, 1fr)); gap:6px; margin-top:8px; font-size:.82rem; }
+  .mini-metrics div { background:#fff; border:1px solid var(--line); border-radius:8px; padding:4px 8px; }
+  .mini-metrics b { display:block; font-size:1rem; font-variant-numeric:tabular-nums; }
+  .answer { margin-top:14px; border-top:1px dashed var(--line); padding-top:14px; }
+  .answer-label { font-weight:700; margin-bottom:8px; }
+  button.big { font-size:1.05rem; padding:12px 26px; }
+  .row.alt { margin-top:10px; }
+  .type-row { display:flex; gap:8px; flex:1 1 320px; }
+  .type-row input { flex:1; min-width:0; font:inherit; padding:8px 12px; border:1px solid var(--line); border-radius:999px; }
+  .ghost-btn { font-weight:600; font-size:.92rem; border:1px solid var(--line); border-radius:999px; padding:8px 16px; cursor:pointer; background:#fff; }
+  .typing { align-self:flex-start; color:var(--muted); font-size:.9rem; font-style:italic; padding:4px 8px; }
+  .summary { width:100%; border-collapse:collapse; font-size:.88rem; margin-top:6px; }
+  .summary th, .summary td { text-align:left; padding:6px 8px; border-bottom:1px solid var(--line); vertical-align:top; }
+  .summary th { color:var(--muted); font-weight:600; font-size:.78rem; text-transform:uppercase; }
+  .summary-wrap { overflow-x:auto; }
+
+  /* Narrator voice */
+  .speed-row { display:flex; flex-wrap:wrap; align-items:center; gap:10px 14px; margin-bottom:14px; }
+  .speed-row input[type=range] { flex:1 1 200px; max-width:320px; accent-color:var(--accent); }
+  .voices { display:grid; grid-template-columns:repeat(auto-fill, minmax(260px, 1fr)); gap:10px; }
+  .voice { border:1px solid var(--line); border-radius:12px; padding:12px 14px; display:flex; flex-direction:column; gap:6px; }
+  .voice.current { border-color:var(--accent); box-shadow:0 0 0 2px rgba(217,99,47,.15); }
+  .voice .vname { font-weight:700; display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+  .voice .vmeta { font-size:.82rem; color:var(--muted); }
+  .voice .bars { display:grid; grid-template-columns:auto 1fr auto; gap:3px 8px; align-items:center; font-size:.78rem; color:var(--muted); }
+  .voice .bar { height:6px; border-radius:3px; background:#efe9df; overflow:hidden; }
+  .voice .bar i { display:block; height:100%; background:var(--blue); }
+  .voice .actions { display:flex; gap:6px; margin-top:4px; }
+  .voice .actions button { padding:5px 14px; font-size:.85rem; }
+
+  /* Story picker */
+  .story-picker { border:1px solid var(--line); border-radius:12px; padding:12px 14px; margin-bottom:14px; background:#fcfbf9; }
+  .field-label { font-weight:600; font-size:.9rem; }
+  .story-picker select { font:inherit; padding:6px 10px; border:1px solid var(--line); border-radius:8px; flex:1 1 260px; max-width:100%; background:#fff; }
+  .new-story { margin-top:10px; }
+  .new-story input { font:inherit; padding:7px 12px; border:1px solid var(--line); border-radius:999px; flex:1 1 220px; min-width:0; }
+  .story-preview { font-size:.88rem; color:var(--muted); margin-top:10px; }
+  .story-preview b { color:var(--ink); }
+
+  /* Progress report */
+  #sessions-table { margin-top:14px; }
+  #sessions-table td.num { font-variant-numeric:tabular-nums; }
+  #sessions-table tr.excluded td { color:var(--muted); }
+  .report { margin-top:16px; border:1px solid var(--line); border-radius:12px; padding:16px 18px; background:#fffdf9; }
+  .report-meta { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:10px; }
+  .report-body p { margin:0 0 10px; }
+  .report-body ul { margin:4px 0 12px; padding-left:22px; }
+  .report-body li { margin:2px 0; }
+  .report-body .closing { color:var(--muted); font-style:italic; border-top:1px solid var(--line); padding-top:10px; margin-top:12px; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>StoryBuddy Lab</h1>
+    <span class="tag">developer test bench</span>
+  </header>
+  <div class="banner" id="banner">StoryBuddy supports speech-therapy practice. It does not diagnose any condition and does not replace a speech therapist.</div>
+
+  <section class="card">
+    <h2><span class="step">1</span> Server status</h2>
+    <p class="hint">Live from <code>/health</code>.</p>
+    <div class="status-row" id="status"><span class="pill"><span class="dot idle"></span>Checking…</span></div>
+  </section>
+
+  <section class="card">
+    <h2><span class="step">2</span> Acoustic engine</h2>
+    <p class="hint">Measures pitch, pitch variation, speaking rate and pauses in a recording. Pick a sample, upload a file, or record yourself reading a few sentences aloud.</p>
+
+    <div class="tabs" role="tablist">
+      <button class="active" data-tab="samples">Samples</button>
+      <button data-tab="upload">Upload a file</button>
+      <button data-tab="record">Record</button>
+    </div>
+
+    <div data-panel="samples">
+      <div class="samples" id="sample-list"><div class="msg">Loading samples…</div></div>
+    </div>
+
+    <div data-panel="upload" hidden>
+      <div class="row">
+        <input type="file" id="file" accept="audio/*,.wav">
+        <button id="upload-go" disabled>Analyse</button>
+      </div>
+      <p class="hint" style="margin-top:8px">WAV files are sent as-is. Other formats (MP3, M4A, WebM…) are converted to WAV in your browser first.</p>
+    </div>
+
+    <div data-panel="record" hidden>
+      <div class="row">
+        <button id="rec">Start recording</button>
+        <span id="rec-timer" class="hint" style="margin:0"></span>
+      </div>
+      <p class="hint" style="margin-top:8px">Read a few sentences aloud (10–30 seconds works best), then press stop. Your browser will ask for microphone access the first time.</p>
+      <audio id="rec-audio" controls hidden></audio>
+    </div>
+
+    <div class="msg" id="analyse-msg"></div>
+    <div class="results" id="results" hidden></div>
+  </section>
+
+  <section class="card" id="voice-card">
+    <h2><span class="step">4</span> Narrator voice</h2>
+    <p class="hint">ElevenLabs' free plan can only use its built-in voices through the API, so these are the built-in voices best suited to children. Each one read the same children's passage; all were transcribed perfectly, so the difference is expressiveness (how much the voice rises and falls) and pace. Preview uses the speed below.</p>
+    <div class="speed-row">
+      <label for="speed">Speed <b id="speed-label">0.80</b></label>
+      <input type="range" id="speed" min="0.7" max="1.2" step="0.05" value="0.8">
+      <span class="hint" style="margin:0" id="speed-hint"></span>
+      <button id="speed-save" class="ghost">Save speed</button>
+    </div>
+    <div class="voices" id="voice-list"><div class="msg">Loading voices…</div></div>
+    <div class="msg" id="voice-msg"></div>
+  </section>
+
+  <section class="card" id="convo-card">
+    <h2><span class="step">3–6</span> Story conversation</h2>
+    <p class="hint">The full loop: the narrator reads a beat and asks you something, you answer out loud, StoryBuddy transcribes and scores it, and the AI companion reacts before moving on. Finished stories are saved to sessions.json.</p>
+
+    <div class="story-picker">
+      <div class="row">
+        <label for="story-select" class="field-label">Story</label>
+        <select id="story-select"></select>
+      </div>
+      <form class="row new-story" id="story-form">
+        <input type="text" id="story-theme" placeholder="Theme (optional), e.g. a day at the beach" maxlength="80" autocomplete="off">
+        <input type="text" id="story-words" placeholder="4 practice words (optional), e.g. sun, boat, fish, shell" autocomplete="off">
+        <button type="submit" class="ghost" id="story-write">✨ Write a new story</button>
+      </form>
+      <div class="story-preview" id="story-preview"></div>
+    </div>
+
+    <div class="row">
+      <button id="convo-start">Start the story</button>
+      <label class="toggle"><input type="checkbox" id="convo-voice" checked> Narrator voice</label>
+      <span class="hint" style="margin:0" id="convo-progress"></span>
+    </div>
+
+    <div class="convo" id="convo-log" hidden></div>
+
+    <div class="answer" id="convo-answer" hidden>
+      <div class="answer-label" id="answer-label">Your turn</div>
+      <div class="row">
+        <button id="convo-rec" class="big">🎤 Answer out loud</button>
+        <span class="hint" style="margin:0" id="convo-timer"></span>
+      </div>
+      <div class="row alt">
+        <form id="convo-type" class="type-row">
+          <input type="text" id="convo-text" placeholder="…or type an answer to test without the mic" maxlength="200" autocomplete="off">
+          <button type="submit" class="ghost">Send</button>
+        </form>
+        <label class="ghost-btn">Upload .wav<input type="file" id="convo-file" accept=".wav,audio/*" hidden></label>
+      </div>
+    </div>
+    <div class="msg" id="convo-msg"></div>
+  </section>
+
+  <section class="card" id="progress-card">
+    <h2><span class="step">7–8</span> Progress report</h2>
+    <p class="hint">Every finished story is saved to <code>sessions.json</code>. The report uses spoken sessions only; sessions with typed answers are kept but left out, because they have no voice measurements. Demo sessions are made-up practice history, clearly labelled, so there's a trend to report on.</p>
+    <div class="row">
+      <button id="report-go">Generate report</button>
+      <button id="seed-add" class="ghost">Add demo sessions</button>
+      <button id="seed-remove" class="ghost">Remove demo sessions</button>
+    </div>
+    <div class="msg" id="progress-msg"></div>
+    <div class="summary-wrap"><table class="summary" id="sessions-table"></table></div>
+    <div class="report" id="report-out" hidden></div>
+  </section>
+
+  <section class="card">
+    <h2>Coming next</h2>
+    <p class="hint">Each step adds a panel here as it is built.</p>
+    <ul class="roadmap">
+      <li class="done"><span class="step">1</span>Skeleton, .env loading, health check</li>
+      <li class="done"><span class="step">2</span>Acoustic engine: extract_features()</li>
+      <li class="done"><span class="step">3</span>Transcription (Scribe v2 + keyterms) and score_response()</li>
+      <li class="done"><span class="step">4</span>Narrator voice: speak(), slower speed, voice picker</li>
+      <li class="done"><span class="step">5</span>Stories: AI-written 6-beat stories, saved in stories.json</li>
+      <li class="done"><span class="step">6</span>Session loop: one beat at a time, saved to sessions.json</li>
+      <li class="done"><span class="step">7</span>Seeded past sessions for the progress trend</li>
+      <li class="done"><span class="step">8</span>Progress report (Groq)</li>
+      <li><span class="step">9</span>Child-facing story page + progress chart</li>
+      <li><span class="step">10</span>End-to-end demo polish, .wav upload fallback</li>
+    </ul>
+  </section>
+</main>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+function setMsg(text, isError = false) {
+  const el = $("analyse-msg");
+  el.textContent = text;
+  el.classList.toggle("error", isError);
+}
+
+async function errorText(res) {
+  try { const j = await res.json(); return typeof j.detail === "string" ? j.detail : JSON.stringify(j.detail); }
+  catch { return `Request failed (${res.status})`; }
+}
+
+// --- Step 1: status ---------------------------------------------------------
+async function loadStatus() {
+  const box = $("status");
+  try {
+    const h = await (await fetch("/health")).json();
+    const pill = (ok, text) => `<span class="pill"><span class="dot ${ok === null ? "idle" : ok ? "ok" : "bad"}"></span>${esc(text)}</span>`;
+    const storage = Object.entries(h.storage || {}).map(([name, s]) =>
+      pill(s.present ? s.valid !== false : null, `${name}: ${s.present ? (s.valid === false ? "invalid" : `${s.entries ?? "?"} entries`) : "not created yet"}`));
+    box.innerHTML = [
+      pill(h.status === "ok", "Server running"),
+      pill(h.keys_configured, h.keys_configured ? "All API keys set" : `Missing: ${h.missing_keys.join(", ")}`),
+      pill(null, `Voice ${h.voice_name} · speed ${h.voice_speed}`),
+      pill(null, `TTS ${h.tts_model}`),
+      pill(null, `STT ${h.stt_model}`),
+      pill(null, `LLM ${h.llm_model}`),
+      ...storage,
+    ].join("");
+  } catch {
+    box.innerHTML = `<span class="pill"><span class="dot bad"></span>Server not reachable</span>`;
+  }
+}
+
+// --- Tabs ---------------------------------------------------------------------
+document.querySelectorAll(".tabs button").forEach((btn) => btn.addEventListener("click", () => {
+  document.querySelectorAll(".tabs button").forEach((b) => b.classList.toggle("active", b === btn));
+  document.querySelectorAll("[data-panel]").forEach((p) => { p.hidden = p.dataset.panel !== btn.dataset.tab; });
+}));
+
+// --- Audio helpers ------------------------------------------------------------
+// Decode any browser-playable audio and re-encode as 16 kHz mono 16-bit WAV,
+// which the backend's Praat engine reads directly.
+async function toWav(blob) {
+  const ctx = new AudioContext();
+  let decoded;
+  try { decoded = await ctx.decodeAudioData(await blob.arrayBuffer()); }
+  finally { ctx.close(); }
+  const rate = 16000;
+  const offline = new OfflineAudioContext(1, Math.max(1, Math.ceil(decoded.duration * rate)), rate);
+  const src = offline.createBufferSource();
+  src.buffer = decoded; src.connect(offline.destination); src.start();
+  const samples = (await offline.startRendering()).getChannelData(0);
+
+  const buf = new ArrayBuffer(44 + samples.length * 2), v = new DataView(buf);
+  const str = (o, s) => [...s].forEach((c, i) => v.setUint8(o + i, c.charCodeAt(0)));
+  str(0, "RIFF"); v.setUint32(4, 36 + samples.length * 2, true); str(8, "WAVE");
+  str(12, "fmt "); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+  v.setUint32(24, rate, true); v.setUint32(28, rate * 2, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true);
+  str(36, "data"); v.setUint32(40, samples.length * 2, true);
+  for (let i = 0; i < samples.length; i++) {
+    const s = Math.max(-1, Math.min(1, samples[i]));
+    v.setInt16(44 + i * 2, s < 0 ? s * 0x8000 : s * 0x7fff, true);
+  }
+  return new Blob([buf], { type: "audio/wav" });
+}
+
+async function analyse(blob, filename, sourceLabel) {
+  setMsg("Analysing…");
+  $("results").hidden = true;
+  try {
+    const form = new FormData();
+    form.append("audio", blob, filename);
+    const res = await fetch("/api/features?detail=true", { method: "POST", body: form });
+    if (!res.ok) throw new Error(await errorText(res));
+    renderResults(await res.json(), sourceLabel);
+    setMsg("");
+  } catch (e) { setMsg(e.message, true); }
+}
+
+// --- Samples ------------------------------------------------------------------
+async function loadSamples() {
+  const list = $("sample-list");
+  try {
+    const samples = await (await fetch("/api/samples")).json();
+    if (!samples.length) {
+      list.innerHTML = `<div class="msg">No samples yet. Run <code>python -m scripts.make_samples</code>.</div>`;
+      return;
+    }
+    list.innerHTML = samples.map((s) => `
+      <div class="sample">
+        <span class="name">${esc(s.name)}</span>
+        <audio controls preload="none" src="/samples/${encodeURIComponent(s.name)}"></audio>
+        <button data-sample="${esc(s.name)}">Analyse</button>
+      </div>`).join("");
+    list.querySelectorAll("button[data-sample]").forEach((b) => b.addEventListener("click", async () => {
+      const name = b.dataset.sample;
+      b.disabled = true;
+      try {
+        const blob = await (await fetch(`/samples/${encodeURIComponent(name)}`)).blob();
+        await analyse(blob, name, `Sample: ${name}`);
+      } finally { b.disabled = false; }
+    }));
+  } catch { list.innerHTML = `<div class="msg error">Could not load samples.</div>`; }
+}
+
+// --- Upload -------------------------------------------------------------------
+$("file").addEventListener("change", () => { $("upload-go").disabled = !$("file").files.length; });
+$("upload-go").addEventListener("click", async () => {
+  const file = $("file").files[0];
+  if (!file) return;
+  const btn = $("upload-go"); btn.disabled = true;
+  try {
+    const isWav = /\.wav$/i.test(file.name) || file.type === "audio/wav" || file.type === "audio/x-wav";
+    let blob = file, name = file.name;
+    if (!isWav) {
+      setMsg("Converting to WAV…");
+      try { blob = await toWav(file); } catch { throw new Error("Your browser could not decode this file. Try a WAV or MP3."); }
+      name = file.name.replace(/\.[^.]+$/, "") + ".wav";
+    }
+    await analyse(blob, name, `Upload: ${file.name}`);
+  } catch (e) { setMsg(e.message, true); }
+  finally { btn.disabled = false; }
+});
+
+// --- Record -------------------------------------------------------------------
+let recorder = null, chunks = [], timer = null;
+$("rec").addEventListener("click", async () => {
+  const btn = $("rec");
+  if (recorder && recorder.state === "recording") { recorder.stop(); return; }
+
+  let stream;
+  try { stream = await navigator.mediaDevices.getUserMedia({ audio: true }); }
+  catch { setMsg("Microphone access was blocked. Allow it in the address bar, or use Upload instead.", true); return; }
+
+  chunks = [];
+  recorder = new MediaRecorder(stream);
+  recorder.ondataavailable = (e) => { if (e.data.size) chunks.push(e.data); };
+  recorder.onstop = async () => {
+    stream.getTracks().forEach((t) => t.stop());
+    clearInterval(timer); $("rec-timer").textContent = "";
+    btn.textContent = "Start recording"; btn.classList.remove("rec"); btn.disabled = true;
+    try {
+      setMsg("Converting to WAV…");
+      const wav = await toWav(new Blob(chunks, { type: recorder.mimeType }));
+      const player = $("rec-audio");
+      if (player.src) URL.revokeObjectURL(player.src);
+      player.src = URL.createObjectURL(wav); player.hidden = false;
+      await analyse(wav, "recording.wav", "Your recording");
+    } catch (e) { setMsg(e.message || "Could not process the recording.", true); }
+    finally { btn.disabled = false; }
+  };
+  recorder.start();
+  const started = Date.now();
+  timer = setInterval(() => { $("rec-timer").textContent = `${((Date.now() - started) / 1000).toFixed(0)}s`; }, 250);
+  btn.textContent = "Stop recording"; btn.classList.add("rec");
+  setMsg("Recording… read aloud, then press stop.");
+});
+
+// --- Results ------------------------------------------------------------------
+function metric(label, value, unit, what) {
+  const shown = value === null || value === undefined ? "–" : value;
+  return `<div class="metric"><div class="label">${label}</div>
+    <div class="value">${shown}${value !== null && value !== undefined && unit ? ` <small>${unit}</small>` : ""}</div>
+    <div class="what">${what}</div></div>`;
+}
+
+function renderResults(r, sourceLabel) {
+  const box = $("results");
+  const tracks = r.tracks;
+  const raw = { ...r }; delete raw.tracks;
+  box.innerHTML = `
+    <div class="source">${esc(sourceLabel)} · <span class="reliable ${r.reliable ? "yes" : "no"}">${r.reliable ? "reliable" : "low confidence"}</span></div>
+    <div class="metrics">
+      ${metric("Mean pitch", r.mean_pitch, "Hz", "Average voice pitch. Children are usually 200–400 Hz.")}
+      ${metric("Pitch variation", r.pitch_variation, "semitones", "How much the voice rises and falls. Higher = more expressive.")}
+      ${metric("Speaking rate", r.speaking_rate, "syll/s", "Syllables per second, pauses included.")}
+      ${metric("Pauses", r.pause_count, "", `Silent gaps of 0.3 s or more, ${r.pause_s ?? 0} s in total.`)}
+    </div>
+    <div class="extras">
+      <span>Recording <b>${r.duration_s}s</b></span>
+      <span>Speech <b>${r.speech_s}s</b></span>
+      <span>Syllables found <b>${r.syllable_count}</b></span>
+    </div>
+    ${r.notes && r.notes.length ? `<div class="notes">${r.notes.map(esc).join("<br>")}</div>` : ""}
+    ${tracks ? chart(tracks, r.duration_s) : ""}
+    <details><summary>Raw JSON (what extract_features returns)</summary><pre>${esc(JSON.stringify(raw, null, 2))}</pre></details>`;
+  box.hidden = false;
+}
+
+function chart(t, duration) {
+  const W = 900, H = 260, L = 44, R = 12, top = 12, pitchH = 150, gap = 16, intH = 50, bottom = H - 22;
+  const x = (s) => L + (s / duration) * (W - L - R);
+  // Fit the axis to the 2nd–98th percentile so stray octave-jump frames
+  // (which the engine already excludes from its numbers) don't squash the contour.
+  const hz = t.pitch.map((p) => p[1]).sort((a, b) => a - b);
+  const pct = (q) => hz[Math.min(hz.length - 1, Math.floor(q * hz.length))];
+  const pMin = hz.length ? Math.max(50, Math.floor((pct(0.02) - 20) / 50) * 50) : 100;
+  const pMax = hz.length ? Math.ceil((pct(0.98) + 20) / 50) * 50 : 400;
+  const yp = (v) => top + pitchH - ((v - pMin) / (pMax - pMin)) * pitchH;
+  const dbs = t.intensity.map((p) => p[1]);
+  const dMax = Math.max(...dbs), dMin = Math.max(Math.min(...dbs), dMax - 50);
+  const i0 = top + pitchH + gap;
+  const yi = (v) => i0 + intH - ((Math.max(v, dMin) - dMin) / (dMax - dMin || 1)) * intH;
+
+  const pauses = t.pauses.map(([a, b]) => `<rect x="${x(a)}" y="${top}" width="${Math.max(1, x(b) - x(a))}" height="${bottom - top}" fill="var(--pause)"/>`).join("");
+  const pitch = t.pitch.filter(([, v]) => v >= pMin && v <= pMax).map(([s, v]) => `<circle cx="${x(s).toFixed(1)}" cy="${yp(v).toFixed(1)}" r="1.6" fill="var(--blue)"/>`).join("");
+  const inten = `<polyline fill="none" stroke="#8a8494" stroke-width="1" points="${t.intensity.map(([s, v]) => `${x(s).toFixed(1)},${yi(v).toFixed(1)}`).join(" ")}"/>`;
+  const syl = t.syllables.map((s) => `<line x1="${x(s)}" x2="${x(s)}" y1="${i0 - 4}" y2="${i0 + intH}" stroke="var(--accent)" stroke-width="1.2"/>`).join("");
+  const step = duration > 20 ? 5 : duration > 6 ? 2 : duration > 2 ? 0.5 : 0.1;
+  let ticks = "";
+  for (let s = 0; s <= duration + 1e-9; s += step) ticks += `<text x="${x(s)}" y="${H - 6}" text-anchor="middle">${+s.toFixed(1)}s</text>`;
+  const pLabels = [pMin, (pMin + pMax) / 2, pMax].map((v) => `<text x="${L - 6}" y="${yp(v) + 4}" text-anchor="end">${Math.round(v)}</text>`).join("");
+
+  return `<div class="chart-wrap"><svg viewBox="0 0 ${W} ${H}" width="100%" style="min-width:560px" role="img" aria-label="Pitch and intensity over time">
+      ${pauses}
+      <line x1="${L}" x2="${W - R}" y1="${top + pitchH}" y2="${top + pitchH}" stroke="var(--line)"/>
+      ${pLabels}<text x="4" y="${top + 10}">Hz</text>
+      ${pitch}${inten}${syl}${ticks}
+    </svg>
+    <div class="legend">
+      <span><i style="background:var(--blue)"></i>Pitch (voiced frames)</span>
+      <span><i style="background:#8a8494;height:2px"></i>Loudness</span>
+      <span><i style="background:var(--accent);width:2px"></i>Syllable found</span>
+      <span><i style="background:var(--pause)"></i>Pause</span>
+    </div></div>`;
+}
+
+// --- Story conversation (Steps 3-6 preview) -----------------------------------
+const convo = { story: null, sessionId: null, beat: 0, busy: false, results: [], audio: new Audio(), recorder: null, runId: 0 };
+
+function convoMsg(text, isError = false) {
+  const el = $("convo-msg");
+  el.textContent = text;
+  el.classList.toggle("error", isError);
+}
+
+function addBubble(cls, html) {
+  const log = $("convo-log");
+  const div = document.createElement("div");
+  div.className = `bubble ${cls}`;
+  div.innerHTML = html;
+  log.appendChild(div);
+  log.scrollTop = log.scrollHeight;
+  return div;
+}
+
+function stopAudio() { convo.audio.pause(); convo.audio.currentTime = 0; }
+
+// Speak `text` in the narrator voice; resolves when playback ends (or right away if voice is off).
+async function say(text, cache) {
+  if (!$("convo-voice").checked) return;
+  const run = convo.runId;
+  try {
+    const res = await fetch("/api/speak", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text, cache }),
+    });
+    if (!res.ok) throw new Error(await errorText(res));
+    const url = URL.createObjectURL(await res.blob());
+    if (run !== convo.runId) return;  // story was restarted meanwhile
+    stopAudio();
+    if (convo.audio.src) URL.revokeObjectURL(convo.audio.src);
+    convo.audio.src = url;
+    await new Promise((resolve) => {
+      convo.audio.onended = resolve;
+      convo.audio.onpause = resolve;
+      convo.audio.play().catch(resolve);
+    });
+  } catch (e) { convoMsg(`Voice: ${e.message}`, true); }
+}
+
+// Warm the server's narration cache for the next beat so it plays without a wait.
+function prefetchBeat(i) {
+  const beat = convo.story && convo.story.beats[i];
+  if (!beat || !$("convo-voice").checked) return;
+  fetch("/api/speak", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ text: `${beat.narration} ${beat.prompt}`, cache: true }),
+  }).catch(() => {});
+}
+
+function replayButton(text, cache) {
+  const id = "r" + Math.random().toString(36).slice(2);
+  setTimeout(() => { const b = $(id); if (b) b.onclick = () => say(text, cache); });
+  return `<button class="replay" id="${id}" title="Play again">▶ replay</button>`;
+}
+
+function setAnswering(on) {
+  $("convo-answer").hidden = !on;
+  ["convo-rec", "convo-text", "convo-file"].forEach((id) => { $(id).disabled = !on; });
+  document.querySelector("#convo-type button").disabled = !on;
+}
+
+async function startStory() {
+  convo.runId++;
+  stopAudio();
+  convo.results = []; convo.beat = 0; convo.busy = false;
+  convoMsg("");
+  $("convo-log").innerHTML = ""; $("convo-log").hidden = false;
+  try {
+    const res = await fetch("/api/session/start", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ story_id: $("story-select").value || null }),
+    });
+    if (!res.ok) throw new Error(await errorText(res));
+    const started = await res.json();
+    convo.story = started.story;
+    convo.sessionId = started.session_id;
+  } catch { convoMsg("Could not start the story.", true); return; }
+  $("convo-start").textContent = "Restart story";
+  addBubble("buddy", `<div class="who">StoryBuddy</div><div><b>${esc(convo.story.title)}</b></div>`);
+  showBeat(0);
+}
+
+async function showBeat(i) {
+  const run = convo.runId;
+  const beat = convo.story.beats[i];
+  convo.beat = i;
+  $("convo-progress").textContent = `Beat ${i + 1} of ${convo.story.beats.length}`;
+  const kind = beat.type === "targeted"
+    ? `<span class="chip info">targeted · say “${esc(beat.target_response)}”</span>`
+    : `<span class="chip info">open question</span>`;
+  const spoken = `${beat.narration} ${beat.prompt}`;
+  addBubble("buddy", `<div class="who">StoryBuddy · beat ${i + 1} ${kind} ${replayButton(spoken, true)}</div>
+    <div>${esc(beat.narration)}</div><div class="prompt">${esc(beat.prompt)}</div>`);
+  $("answer-label").textContent = beat.type === "targeted" ? `Your turn: say “${beat.target_response}”` : "Your turn: answer the question";
+  setAnswering(true);
+  $("convo-text").value = "";
+  prefetchBeat(i + 1);
+  await say(spoken, true);
+  if (run === convo.runId && !convo.busy) $("convo-rec").focus();
+}
+
+async function sendAnswer(form, previewLabel) {
+  if (convo.busy) return;
+  convo.busy = true;
+  const run = convo.runId;
+  stopAudio();
+  setAnswering(false);
+  const thinking = document.createElement("div");
+  thinking.className = "typing"; thinking.textContent = previewLabel;
+  $("convo-log").appendChild(thinking); $("convo-log").scrollTop = $("convo-log").scrollHeight;
+  let r;
+  try {
+    const res = await fetch(`/api/session/${encodeURIComponent(convo.sessionId)}/respond`, { method: "POST", body: form });
+    if (!res.ok) throw new Error(await errorText(res));
+    r = await res.json();
+  } catch (e) {
+    thinking.remove(); convo.busy = false;
+    if (run !== convo.runId) return;
+    convoMsg(e.message, true); setAnswering(true);
+    return;
+  }
+  thinking.remove();
+  if (run !== convo.runId) return;
+  convoMsg("");
+  convo.results.push({ beat: convo.story.beats[convo.beat], r });
+  renderChild(r);
+  const src = r.reaction_source === "groq"
+    ? `<span class="chip info">Groq</span>`
+    : `<span class="chip mid" title="${esc(r.fallback_reason || "")}">built-in line · ${esc(r.fallback_reason || "fallback")}</span>`;
+  addBubble("buddy react", `<div class="who">StoryBuddy ${src} ${replayButton(r.reaction, false)}</div><div>${esc(r.reaction)}</div>`);
+  await say(r.reaction, false);
+  convo.busy = false;
+  if (run !== convo.runId) return;
+  if (r.next_beat_index !== null) showBeat(r.next_beat_index);
+  else finishStory(r.saved_session);
+}
+
+function renderChild(r) {
+  const chips = [];
+  if (r.score) {
+    const s = r.score;
+    const cls = s.match === "exact" ? "good" : s.match === "close" ? "mid" : "low";
+    const label = { exact: "said the word", close: "close", missed: "different word", no_response: "no answer" }[s.match];
+    chips.push(`<span class="chip ${cls}">${label} · accuracy ${Math.round(s.accuracy * 100)}%</span>`);
+    if (s.confidence !== null && s.confidence !== undefined) chips.push(`<span class="chip">recognition confidence ${Math.round(s.confidence * 100)}%</span>`);
+  }
+  if (r.participation) {
+    const p = r.participation;
+    chips.push(`<span class="chip ${p.responded ? "good" : "mid"}">${p.responded ? "responded" : "no answer"}</span>`);
+    chips.push(`<span class="chip">${p.word_count} word${p.word_count === 1 ? "" : "s"}</span>`);
+    if (p.duration_s !== null) chips.push(`<span class="chip">${p.duration_s}s of speech</span>`);
+  }
+  chips.push(`<span class="chip">${r.input === "voice" ? "voice" : "typed"}</span>`);
+  let metrics = "";
+  if (r.features) {
+    const f = r.features;
+    metrics = `<div class="mini-metrics">
+      <div>Mean pitch<b>${f.mean_pitch ?? "–"} Hz</b></div>
+      <div>Pitch variation<b>${f.pitch_variation ?? "–"} st</b></div>
+      <div>Speaking rate<b>${f.speaking_rate ?? "–"} syll/s</b></div>
+      <div>Pauses<b>${f.pause_count}</b></div>
+    </div>${f.reliable ? "" : `<div class="hint" style="margin:6px 0 0;font-size:.8rem">Low confidence: ${esc((f.notes || []).join(" "))}</div>`}`;
+  }
+  addBubble("child", `<div class="who">You</div>
+    <div class="heard ${r.heard ? "" : "silent"}">${r.heard ? esc(r.heard) : "(nothing heard)"}</div>
+    <div class="chips">${chips.join("")}</div>${metrics}`);
+}
+
+function finishStory(saved) {
+  setAnswering(false);
+  $("convo-progress").textContent = "Story complete";
+  const rows = convo.results.map(({ beat, r }, i) => {
+    const result = r.score
+      ? `${r.score.said_target ? "✓" : "✗"} ${Math.round(r.score.accuracy * 100)}%`
+      : r.participation.responded ? `responded (${r.participation.word_count} word${r.participation.word_count === 1 ? "" : "s"})` : "no answer";
+    const acoustics = r.features && r.features.mean_pitch !== null
+      ? `${r.features.mean_pitch} Hz · ${r.features.pitch_variation} st` : "–";
+    return `<tr><td>${i + 1}</td><td>${beat.type}</td><td>${esc(beat.target_response || "–")}</td><td>${esc(r.heard || "(nothing)")}</td><td>${result}</td><td>${acoustics}</td></tr>`;
+  }).join("");
+  const targeted = convo.results.filter((x) => x.r.score);
+  const acc = targeted.length ? Math.round(100 * targeted.reduce((a, x) => a + x.r.score.accuracy, 0) / targeted.length) : 0;
+  const savedNote = !saved ? "not saved"
+    : saved.mode === "voice" ? "saved to sessions.json ✓ · counts toward the progress report"
+    : "saved to sessions.json ✓ · has typed answers, so it's left out of the progress report";
+  addBubble("buddy", `<div class="who">Session summary · ${esc(savedNote)}</div>
+    <div>Targeted-word accuracy: <b>${acc}%</b> across ${targeted.length} words.</div>
+    <div class="summary-wrap"><table class="summary"><thead><tr><th>#</th><th>Type</th><th>Target</th><th>Heard</th><th>Result</th><th>Pitch</th></tr></thead><tbody>${rows}</tbody></table></div>`);
+  say("The end! Thank you for reading with me today.", true);
+  loadSessions();
+  loadStatus();
+}
+
+$("convo-start").addEventListener("click", startStory);
+
+$("convo-type").addEventListener("submit", (e) => {
+  e.preventDefault();
+  const form = new FormData();
+  form.append("text", $("convo-text").value);
+  sendAnswer(form, "StoryBuddy is thinking…");
+});
+
+$("convo-file").addEventListener("change", async () => {
+  const file = $("convo-file").files[0];
+  $("convo-file").value = "";
+  if (!file) return;
+  let blob = file;
+  if (!/\.wav$/i.test(file.name)) {
+    try { blob = await toWav(file); } catch { convoMsg("Your browser could not decode this file. Try a WAV.", true); return; }
+  }
+  const form = new FormData();
+  form.append("audio", blob, "answer.wav");
+  sendAnswer(form, "Listening to your recording…");
+});
+
+$("convo-rec").addEventListener("click", async () => {
+  const btn = $("convo-rec");
+  if (convo.recorder && convo.recorder.state === "recording") { convo.recorder.stop(); return; }
+  stopAudio();  // don't record the narrator through the speakers
+  let stream;
+  try { stream = await navigator.mediaDevices.getUserMedia({ audio: true }); }
+  catch { convoMsg("Microphone access was blocked. Allow it in the address bar, or type / upload instead.", true); return; }
+  const chunks = [];
+  const rec = new MediaRecorder(stream);
+  convo.recorder = rec;
+  let timer;
+  rec.ondataavailable = (e) => { if (e.data.size) chunks.push(e.data); };
+  rec.onstop = async () => {
+    stream.getTracks().forEach((t) => t.stop());
+    clearInterval(timer); $("convo-timer").textContent = "";
+    btn.textContent = "🎤 Answer out loud"; btn.classList.remove("rec");
+    try {
+      const wav = await toWav(new Blob(chunks, { type: rec.mimeType }));
+      const form = new FormData();
+      form.append("audio", wav, "answer.wav");
+      sendAnswer(form, "Listening…");
+    } catch { convoMsg("Could not process the recording. Try again, or type instead.", true); }
+  };
+  rec.start();
+  const t0 = Date.now();
+  timer = setInterval(() => { $("convo-timer").textContent = `Recording… ${((Date.now() - t0) / 1000).toFixed(0)}s, press again to stop`; }, 250);
+  btn.textContent = "⏹ Stop"; btn.classList.add("rec");
+  convoMsg("");
+});
+
+// --- Narrator voice (Step 4) -------------------------------------------------------
+const PREVIEW_LINE = "Once upon a time, a little turtle named Tilly found a tiny blue shell. Can you say the word shell?";
+const preview = new Audio();
+let voiceState = { voices: [], current: {} };
+
+function voiceMsg(text, isError = false) {
+  const el = $("voice-msg");
+  el.textContent = text;
+  el.classList.toggle("error", isError);
+}
+
+function speedHint(v) {
+  if (v < 0.8) return "very slow";
+  if (v < 0.95) return "slower: good for young listeners";
+  if (v <= 1.05) return "normal speed";
+  return "faster than normal";
+}
+
+function showSpeed() {
+  const v = parseFloat($("speed").value);
+  $("speed-label").textContent = v.toFixed(2);
+  $("speed-hint").textContent = speedHint(v);
+}
+
+async function loadVoices() {
+  try {
+    voiceState = await (await fetch("/api/voices")).json();
+  } catch { $("voice-list").innerHTML = `<div class="msg error">Could not load voices.</div>`; return; }
+  $("speed").value = voiceState.current.speed;
+  showSpeed();
+  renderVoices();
+}
+
+function renderVoices() {
+  const maxVar = Math.max(...voiceState.voices.map((v) => v.pitch_variation));
+  const maxRate = Math.max(...voiceState.voices.map((v) => v.speaking_rate));
+  $("voice-list").innerHTML = voiceState.voices.map((v) => {
+    const current = v.id === voiceState.current.voice_id;
+    return `<div class="voice ${current ? "current" : ""}">
+      <div class="vname">${esc(v.name)} ${current ? `<span class="chip good">in use</span>` : ""}</div>
+      <div class="vmeta">${esc(v.gender)} · ${esc(v.accent)}</div>
+      <div class="vmeta">${esc(v.note)}</div>
+      <div class="bars">
+        <span>Expressive</span><span class="bar"><i style="width:${(100 * v.pitch_variation / maxVar).toFixed(0)}%"></i></span><span>${v.pitch_variation} st</span>
+        <span>Pace</span><span class="bar"><i style="width:${(100 * v.speaking_rate / maxRate).toFixed(0)}%"></i></span><span>${v.speaking_rate}/s</span>
+      </div>
+      <div class="actions">
+        <button class="ghost" data-preview="${esc(v.id)}">▶ Preview</button>
+        ${current ? "" : `<button data-use="${esc(v.id)}">Use this voice</button>`}
+      </div>
+    </div>`;
+  }).join("");
+  $("voice-list").querySelectorAll("[data-preview]").forEach((b) => b.addEventListener("click", () => previewVoice(b)));
+  $("voice-list").querySelectorAll("[data-use]").forEach((b) => b.addEventListener("click", () => saveVoice({ voice_id: b.dataset.use })));
+}
+
+async function previewVoice(btn) {
+  preview.pause();
+  const label = btn.textContent;
+  btn.disabled = true; btn.textContent = "Loading…";
+  try {
+    const res = await fetch("/api/speak", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text: PREVIEW_LINE, cache: true, voice_id: btn.dataset.preview, speed: parseFloat($("speed").value) }),
+    });
+    if (!res.ok) throw new Error(await errorText(res));
+    if (preview.src) URL.revokeObjectURL(preview.src);
+    preview.src = URL.createObjectURL(await res.blob());
+    preview.play();
+    voiceMsg("");
+  } catch (e) { voiceMsg(e.message, true); }
+  finally { btn.disabled = false; btn.textContent = label; }
+}
+
+async function saveVoice(change) {
+  try {
+    const res = await fetch("/api/settings/voice", {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(change),
+    });
+    if (!res.ok) throw new Error(await errorText(res));
+    voiceState.current = await res.json();
+    renderVoices(); loadStatus();
+    const name = voiceState.voices.find((v) => v.id === voiceState.current.voice_id)?.name;
+    voiceMsg(`Saved: ${name}, speed ${voiceState.current.speed.toFixed(2)}. New narration uses it right away.`);
+  } catch (e) { voiceMsg(e.message, true); }
+}
+
+$("speed").addEventListener("input", showSpeed);
+$("speed-save").addEventListener("click", () => saveVoice({ speed: parseFloat($("speed").value) }));
+
+// --- Stories (Step 5) ---------------------------------------------------------------
+let storyCards = [];
+
+function storyLabel(s) {
+  const when = s.created ? ` · ${s.created.slice(0, 10)}` : "";
+  const src = s.source === "built-in" ? " (built-in)" : "";
+  return `${s.title}${src}${when}`;
+}
+
+function showStoryPreview() {
+  const s = storyCards.find((c) => c.id === $("story-select").value);
+  $("story-preview").innerHTML = s
+    ? `<b>${esc(s.title)}</b>${s.main_character ? ` · ${esc(s.main_character)}${s.helper ? ` and ${esc(s.helper)}` : ""}` : ""} · practice words: <b>${(s.target_words || []).map(esc).join(", ")}</b>${s.theme ? ` · theme: ${esc(s.theme)}` : ""}`
+    : "";
+}
+
+async function loadStories(selectId) {
+  try { storyCards = await (await fetch("/api/stories")).json(); }
+  catch { $("story-preview").textContent = "Could not load stories."; return; }
+  const select = $("story-select");
+  // Newest AI story first, built-in story last.
+  const ordered = [...storyCards.slice(1).reverse(), storyCards[0]];
+  select.innerHTML = ordered.map((s) => `<option value="${esc(s.id)}">${esc(storyLabel(s))}</option>`).join("");
+  if (selectId) select.value = selectId;
+  showStoryPreview();
+}
+
+$("story-select").addEventListener("change", showStoryPreview);
+
+$("story-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const btn = $("story-write");
+  const words = $("story-words").value.split(/[,\s]+/).map((w) => w.trim()).filter(Boolean);
+  btn.disabled = true; btn.textContent = "Writing…";
+  $("story-preview").textContent = "The AI is writing and checking a new story (usually 3–10 seconds)…";
+  try {
+    const res = await fetch("/api/stories", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ theme: $("story-theme").value || null, target_words: words.length ? words : null }),
+    });
+    if (!res.ok) throw new Error(await errorText(res));
+    const story = await res.json();
+    await loadStories(story.id);
+    if (story.source === "fallback") {
+      $("story-preview").innerHTML += `<div class="notes">${esc(story.note)} Try again in a minute.</div>`;
+    }
+  } catch (e) {
+    $("story-preview").innerHTML = `<span class="error" style="color:var(--red)">${esc(e.message)}</span>`;
+  } finally { btn.disabled = false; btn.textContent = "✨ Write a new story"; }
+});
+
+// --- Progress report (Steps 7-8) ------------------------------------------------
+function progressMsg(text, isError = false) {
+  const el = $("progress-msg");
+  el.textContent = text;
+  el.classList.toggle("error", isError);
+}
+
+async function loadSessions() {
+  const table = $("sessions-table");
+  let rows;
+  try { rows = await (await fetch("/api/sessions")).json(); }
+  catch { table.innerHTML = ""; progressMsg("Could not load sessions.", true); return; }
+  if (!rows.length) {
+    table.innerHTML = `<tbody><tr><td class="hint">No sessions yet. Finish a story above, or add demo sessions.</td></tr></tbody>`;
+    return;
+  }
+  const n = (v, unit = "") => (v === null || v === undefined ? "–" : `${v}${unit}`);
+  table.innerHTML = `<thead><tr><th>Date</th><th>Source</th><th>Target accuracy</th><th>Pitch var.</th><th>Rate</th><th>Pauses</th><th>Open answered</th><th>In report</th></tr></thead><tbody>` +
+    rows.map((s) => {
+      const m = s.summary, inReport = s.mode === "voice";
+      const source = s.seeded ? `<span class="chip mid">demo data</span>` : `<span class="chip info">${esc(s.mode)}</span>`;
+      return `<tr class="${inReport ? "" : "excluded"}">
+        <td>${esc(s.date.replace("T", " ").slice(0, 16))}</td><td>${source}</td>
+        <td class="num">${m.targeted_accuracy === null ? "–" : Math.round(m.targeted_accuracy * 100) + "%"} <span class="hint">(${m.targets_said}/${m.targets_total})</span></td>
+        <td class="num">${n(m.pitch_variation, " st")}</td><td class="num">${n(m.speaking_rate)}</td><td class="num">${n(m.pause_count)}</td>
+        <td class="num">${m.open_answered}/${m.open_total}</td><td>${inReport ? "✓" : "typed, left out"}</td></tr>`;
+    }).join("") + `</tbody>`;
+}
+
+// Minimal, safe markdown for the report: **bold**, *italic*, "- " bullets (nested), paragraphs.
+function renderReport(md) {
+  const inline = (s) => esc(s).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>").replace(/(^|\s)\*(\S.*?\S|\S)\*(?=\s|$)/g, "$1<em>$2</em>");
+  const out = [];
+  let para = [], listDepth = 0;
+  const flushPara = () => { if (para.length) { out.push(`<p>${para.join(" ")}</p>`); para = []; } };
+  const closeLists = (to) => { while (listDepth > to) { out.push("</ul>"); listDepth--; } };
+  for (const raw of md.split("\n")) {
+    const line = raw.replace(/\s+$/, "");
+    const bullet = line.match(/^(\s*)[-*•]\s+(.*)$/);
+    if (bullet && !/^\*\*/.test(line.trim())) {
+      flushPara();
+      const depth = Math.floor(bullet[1].length / 2) + 1;
+      while (listDepth < depth) { out.push("<ul>"); listDepth++; }
+      closeLists(depth);
+      out.push(`<li>${inline(bullet[2])}</li>`);
+    } else if (!line.trim()) {
+      flushPara(); closeLists(0);
+    } else {
+      closeLists(0);
+      if (line.includes("practice-tracking summary, not a clinical assessment")) {
+        flushPara(); out.push(`<p class="closing">${inline(line.trim().replace(/^\*|\*$/g, ""))}</p>`);
+      } else para.push(inline(line.trim()));
+    }
+  }
+  flushPara(); closeLists(0);
+  return out.join("");
+}
+
+$("report-go").addEventListener("click", async () => {
+  const btn = $("report-go"), out = $("report-out");
+  btn.disabled = true;
+  progressMsg("Writing the report…");
+  try {
+    const res = await fetch("/api/report", { method: "POST" });
+    if (!res.ok) throw new Error(await errorText(res));
+    const r = await res.json();
+    const meta = [
+      r.source === "groq" ? `<span class="chip info">Groq · ${esc(r.model)}</span>` : `<span class="chip mid">built-in template</span>`,
+      `<span class="chip">${r.sessions_used} session${r.sessions_used === 1 ? "" : "s"}</span>`,
+      r.demo_sessions_used ? `<span class="chip mid">includes ${r.demo_sessions_used} demo session${r.demo_sessions_used === 1 ? "" : "s"}</span>` : "",
+    ].join("");
+    out.innerHTML = `<div class="report-meta">${meta}</div>
+      ${r.note ? `<div class="notes">${esc(r.note)}</div>` : ""}
+      <div class="report-body">${renderReport(r.report)}</div>
+      <details><summary>Data sent to the AI</summary><pre>${esc(JSON.stringify(r.input, null, 2))}</pre></details>`;
+    out.hidden = false;
+    progressMsg("");
+  } catch (e) { progressMsg(e.message, true); }
+  finally { btn.disabled = false; }
+});
+
+async function seedAction(method, doneText) {
+  progressMsg("Updating…");
+  try {
+    const res = await fetch("/api/sessions/seed", { method });
+    if (!res.ok) throw new Error(await errorText(res));
+    const r = await res.json();
+    progressMsg(doneText(r));
+    loadSessions(); loadStatus();
+  } catch (e) { progressMsg(e.message, true); }
+}
+$("seed-add").addEventListener("click", () => seedAction("POST", (r) => `Added ${r.seeded} demo sessions (${r.total} total).`));
+$("seed-remove").addEventListener("click", () => seedAction("DELETE", (r) => `Removed demo sessions. ${r.total} real session${r.total === 1 ? "" : "s"} left.`));
+
+loadVoices();
+loadStories();
+loadSessions();
+loadStatus();
+loadSamples();
+</script>
+</body>
+</html>

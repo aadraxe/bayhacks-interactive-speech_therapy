@@ -1,0 +1,38 @@
+# --- Secrets -------------------------------------------------------------------
+# Real API keys live here. Copy .env.example to .env; never commit .env.
+.env
+.env.*
+!.env.example
+
+# --- Python ----------------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# --- Runtime data (created by the app, specific to each install) -----------------
+# Practice sessions may hold a child's answers: keep them local.
+data/sessions.json
+data/stories.json
+data/settings.json
+data/tts_cache/
+data/recordings/
+recordings/
+*.tmp
+
+# Generated audio (recreate with: python -m scripts.make_samples)
+samples/**/*.wav
+samples/**/*.mp3
+
+# --- Editors / OS ----------------------------------------------------------------
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+desktop.ini

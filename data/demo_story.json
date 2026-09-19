@@ -1,0 +1,43 @@
+{
+  "id": "pip-and-the-kite",
+  "title": "Pip and the Red Kite",
+  "note": "Placeholder story for testing. Step 5 replaces this with your stories.json.",
+  "beats": [
+    {
+      "type": "targeted",
+      "narration": "Pip the little fox lived at the edge of a quiet green forest. One windy morning, Pip saw something red flying high in the sky. It was a kite!",
+      "prompt": "Can you say the word kite?",
+      "target_response": "kite"
+    },
+    {
+      "type": "open",
+      "narration": "Whoosh! The wind blew, and the kite got stuck in the branches of a tall oak tree. Pip looked up. The tree was very, very tall.",
+      "prompt": "What do you think Pip should do?",
+      "target_response": null
+    },
+    {
+      "type": "targeted",
+      "narration": "Pip's heart went thump, thump, thump. The tree was so tall! Pip took a big, slow breath.",
+      "prompt": "Pip wants to feel brave. Can you say brave?",
+      "target_response": "brave"
+    },
+    {
+      "type": "targeted",
+      "narration": "Step by step, Pip went up the tree. Up, up, up! Pip reached out a paw and held the kite string.",
+      "prompt": "Pip is going up the tree. Can you say climb?",
+      "target_response": "climb"
+    },
+    {
+      "type": "open",
+      "narration": "At the bottom of the tree, a small rabbit was waiting. That is my kite, said the rabbit. Thank you, Pip!",
+      "prompt": "How do you think the rabbit feels?",
+      "target_response": null
+    },
+    {
+      "type": "targeted",
+      "narration": "Pip and the rabbit flew the kite together all afternoon. They laughed and ran in the sunshine.",
+      "prompt": "Pip made a new friend. Can you say friend?",
+      "target_response": "friend"
+    }
+  ]
+}

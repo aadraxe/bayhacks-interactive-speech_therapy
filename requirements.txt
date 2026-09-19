@@ -1,0 +1,19 @@
+# StoryBuddy runtime dependencies (Python 3.10+; developed on 3.11).
+#   pip install -r requirements.txt
+# For running the tests, install requirements-dev.txt instead.
+
+# Web app
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+pydantic==2.13.5
+python-multipart==0.0.20
+
+# Config (.env)
+python-dotenv==1.0.1
+
+# HTTP client for ElevenLabs (voice) and Groq (LLM)
+httpx==0.28.1
+
+# Acoustic analysis (Praat)
+praat-parselmouth==0.4.5
+numpy==1.26.4
