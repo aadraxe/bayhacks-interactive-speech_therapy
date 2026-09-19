@@ -448,8 +448,15 @@ def lab():
 
 
 @app.get("/", include_in_schema=False)
-def index():
-    page = config.STATIC_DIR / "index.html"
+def landing():
+    """Marketing page that explains StoryBuddy and links to the app."""
+    page = config.STATIC_DIR / "landing.html"
     if page.exists():
         return FileResponse(str(page))
     return {"message": "StoryBuddy backend is running.", "banner": config.SAFETY_BANNER}
+
+
+@app.get("/app", include_in_schema=False)
+def index():
+    """The child experience: log in, pick a story, read along with Buddy."""
+    return FileResponse(str(config.STATIC_DIR / "index.html"))

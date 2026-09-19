@@ -21,7 +21,8 @@ copy .env.example .env
 
 Then open:
 
-- **Child experience:** http://127.0.0.1:8000/
+- **Landing page:** http://127.0.0.1:8000/
+- **Child experience:** http://127.0.0.1:8000/app
 - **Developer lab:** http://127.0.0.1:8000/lab
 - **API docs:** http://127.0.0.1:8000/docs
 
