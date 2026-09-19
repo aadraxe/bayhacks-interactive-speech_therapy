@@ -1,7 +1,8 @@
 """Simple local accounts: username + password stored in data/users.json.
 
-Passwords are salted PBKDF2 hashes (stdlib only). Login returns a bearer token
-kept in the browser; tokens are listed on the user record until logout/expiry.
+Signup also stores a parent email. Passwords are salted PBKDF2 hashes (stdlib
+only). Login returns a bearer token kept in the browser; tokens are listed on
+the user record until logout/expiry.
 """
 
 from __future__ import annotations
@@ -20,6 +21,7 @@ USERS_FILE = config.DATA_DIR / "users.json"
 TOKEN_DAYS = 30
 PBKDF2_ROUNDS = 120_000
 USERNAME_RE = re.compile(r"^[a-zA-Z0-9_]{3,24}$")
+EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 _lock = threading.Lock()
 
@@ -73,11 +75,25 @@ def validate_password(password: str) -> str | None:
     return None
 
 
-def signup(username: str, password: str) -> dict:
+def validate_parent_email(email: str) -> str | None:
+    email = (email or "").strip()
+    if not email:
+        return "Please enter a parent's email."
+    if len(email) > 120:
+        return "Email is too long."
+    if not EMAIL_RE.match(email):
+        return "Please enter a valid parent email."
+    return None
+
+
+def signup(username: str, password: str, parent_email: str = "") -> dict:
     username = (username or "").strip()
+    parent_email = (parent_email or "").strip()
     if err := validate_username(username):
         raise ValueError(err)
     if err := validate_password(password):
+        raise ValueError(err)
+    if err := validate_parent_email(parent_email):
         raise ValueError(err)
 
     with _lock:
@@ -90,6 +106,7 @@ def signup(username: str, password: str) -> dict:
         expires = (_now() + timedelta(days=TOKEN_DAYS)).isoformat()
         data["users"][key] = {
             "username": username,
+            "parent_email": parent_email.lower(),
             "salt": salt,
             "password_hash": pw_hash,
             "created": _now().isoformat(),

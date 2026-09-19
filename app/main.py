@@ -149,6 +149,7 @@ def speak(body: SpeakRequest):
 class AuthBody(BaseModel):
     username: str = Field(min_length=1, max_length=24)
     password: str = Field(min_length=1, max_length=72)
+    parent_email: str | None = Field(default=None, max_length=120)
 
 
 def _bearer(authorization: str | None) -> str | None:
@@ -163,7 +164,7 @@ def _bearer(authorization: str | None) -> str | None:
 @app.post("/api/auth/signup", tags=["Account"], summary="Create a new account")
 def auth_signup(body: AuthBody):
     try:
-        return users.signup(body.username, body.password)
+        return users.signup(body.username, body.password, body.parent_email or "")
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
 

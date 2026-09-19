@@ -160,6 +160,13 @@ function setAuthMode(mode) {
   $("auth-submit").textContent = signup ? "Sign up" : "Log in";
   $("auth-toggle").textContent = signup ? "Have an account? Log in" : "New here? Create an account";
   $("auth-password").autocomplete = signup ? "new-password" : "current-password";
+  $("auth-form").classList.toggle("is-signup", signup);
+  const parentField = $("auth-parent-field");
+  const parentInput = $("auth-parent-email");
+  parentField.hidden = !signup;
+  parentInput.required = signup;
+  parentInput.disabled = !signup;
+  if (!signup) parentInput.value = "";
   authMsg("");
 }
 
@@ -194,19 +201,23 @@ $("auth-form").addEventListener("submit", async (e) => {
   e.preventDefault();
   const username = $("auth-username").value.trim();
   const password = $("auth-password").value;
+  const parentEmail = $("auth-parent-email").value.trim();
   const btn = $("auth-submit");
   btn.disabled = true;
   authMsg(authMode === "signup" ? "Creating your account…" : "Logging in…");
   try {
+    const payload = { username, password };
+    if (authMode === "signup") payload.parent_email = parentEmail;
     const res = await fetch(authMode === "signup" ? "/api/auth/signup" : "/api/auth/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username, password }),
+      body: JSON.stringify(payload),
     });
     if (!res.ok) throw new Error(await errorText(res));
     const data = await res.json();
     setSession(data.username, data.token);
     $("auth-password").value = "";
+    $("auth-parent-email").value = "";
     authMsg("");
     showScreen("home");
     refreshStoryRotation();
@@ -565,12 +576,33 @@ async function sendAnswer(form, waitLabel) {
   state.busy = false;
   if (run !== state.runId) return;
 
+  // Retry: companion already invited another try — do NOT re-read the story beat.
+  if (!r.beat_done) {
+    await new Promise((ok) => setTimeout(ok, 350));
+    if (run === state.runId) await retryBeat(r, run);
+    return;
+  }
+
   if (r.next_beat_index !== null) {
     await new Promise((ok) => setTimeout(ok, 350));
     if (run === state.runId) showBeat(r.next_beat_index);
   } else {
     finishStory();
   }
+}
+
+/** Same targeted beat, next try — mic on, no narration replay. */
+async function retryBeat(r, run) {
+  const beat = state.story.beats[r.beat_index ?? state.beat];
+  const tryNum = (r.attempt || 1) + 1;
+  const max = r.max_attempts || 3;
+  $("answer-hint").textContent =
+    beat?.target_response
+      ? `Try again — say “${beat.target_response}” (${tryNum} of ${max})`
+      : "Try again — say it out loud!";
+  // Keep the companion's "let's try again" line on screen; clear old heard chips lightly.
+  $("speech-area").querySelectorAll(".child-heard").forEach((n) => n.remove());
+  await beginListening(run);
 }
 
 function finishStory() {

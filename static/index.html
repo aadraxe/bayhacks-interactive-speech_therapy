@@ -37,15 +37,20 @@
           <label class="field">
             <span>Username</span>
             <input id="auth-username" name="username" type="text" autocomplete="username"
-                   maxlength="24" required placeholder="your name">
+                   maxlength="24" required placeholder="enter your name...">
           </label>
           <label class="field">
             <span>Password</span>
             <input id="auth-password" name="password" type="password" autocomplete="current-password"
-                   maxlength="72" required placeholder="••••">
+                   maxlength="72" required placeholder="enter your password...">
+          </label>
+          <label class="field signup-only" id="auth-parent-field" hidden>
+            <span>Parent's email</span>
+            <input id="auth-parent-email" name="parent_email" type="email" autocomplete="email"
+                   maxlength="120" placeholder="enter parent's email...">
           </label>
           <p class="auth-msg" id="auth-msg" role="status"></p>
-          <button class="btn big" type="submit" id="auth-submit">Log in</button>
+          <button class="btn" type="submit" id="auth-submit">Log in</button>
           <button class="btn ghost" type="button" id="auth-toggle">New here? Create an account</button>
         </form>
       </div>
